@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#051a2d"/>
+      <stop offset="100%" style="stop-color:#0a1a30"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#5dade2;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="220" rx="72" ry="88" fill="#fce4b8"/>
+  <!-- Light blue long hair -->
+  <path d="M122 185 Q135 85 175 120 Q190 70 215 105 Q240 65 260 115 Q280 85 278 185" fill="#5dade2"/>
+  <path d="M122 185 Q110 260 108 380" fill="#5dade2"/>
+  <path d="M278 185 Q290 260 292 380" fill="#5dade2"/>
+  <!-- Ponytail high -->
+  <circle cx="200" cy="100" r="20" fill="#5dade2"/>
+  <path d="M185 100 Q200 80 215 100" fill="#5dade2"/>
+  <!-- Hair tie -->
+  <rect x="190" y="112" width="20" height="8" rx="4" fill="#f1c40f"/>
+  <!-- Eyes - kind and warm -->
+  <ellipse cx="170" cy="225" rx="16" ry="18" fill="white"/>
+  <ellipse cx="230" cy="225" rx="16" ry="18" fill="white"/>
+  <circle cx="172" cy="223" r="11" fill="#8b4513"/>
+  <circle cx="232" cy="223" r="11" fill="#8b4513"/>
+  <circle cx="175" cy="219" r="4" fill="white"/>
+  <circle cx="235" cy="219" r="4" fill="white"/>
+  <!-- Gentle eyebrows -->
+  <path d="M155 208 Q170 200 186 208" fill="none" stroke="#5dade2" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M214 208 Q230 200 246 208" fill="none" stroke="#5dade2" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Eyelashes -->
+  <path d="M154 212 L151 206" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M246 212 L249 206" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Warm smile -->
+  <path d="M178 262 Q200 278 222 262" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Body - white and blue royal dress -->
+  <path d="M138 305 Q200 292 262 305 L270 500 L130 500 Z" fill="white"/>
+  <!-- Blue sash -->
+  <path d="M138 305 Q200 320 262 305" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+  <rect x="140" y="340" width="120" height="160" rx="5" fill="#5dade2" opacity="0.3"/>
+  <!-- Royal emblem -->
+  <circle cx="200" cy="380" r="20" fill="none" stroke="#f1c40f" stroke-width="2"/>
+  <text x="200" y="387" text-anchor="middle" fill="#f1c40f" font-size="18" font-family="serif">V</text>
+  <!-- Peacock pattern hints -->
+  <circle cx="175" cy="430" r="5" fill="#3498db" opacity="0.4"/>
+  <circle cx="200" cy="425" r="5" fill="#3498db" opacity="0.4"/>
+  <circle cx="225" cy="430" r="5" fill="#3498db" opacity="0.4"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">VIVI</text>
+</svg>

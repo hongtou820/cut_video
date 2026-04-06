@@ -1,0 +1,316 @@
+const express = require('express');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const { execFile } = require('child_process');
+const https = require('https');
+const http = require('http');
+
+const router = express.Router();
+
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+const OUTPUT_DIR = path.join(__dirname, 'output');
+const LOGO_PATH = path.join(__dirname, 'AIJAV LOGO_SQUARE_BLACK.png');
+const DB_PATH = path.join(__dirname, 'db.json');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+
+// Simple JSON DB for metadata
+function loadDB() {
+  try { return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch (_) { return {}; }
+}
+function saveDB(db) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+}
+function saveMeta(filename, meta) {
+  const db = loadDB();
+  db[filename] = { ...meta, created: Date.now() };
+  saveDB(db);
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 4 * 1024 * 1024 * 1024 }, // 4GB
+});
+
+function timeToSec(t) {
+  const parts = t.split(':').map(Number);
+  return parts[0] * 3600 + parts[1] * 60 + (parts[2] || 0);
+}
+
+function escapeSubPath(p) {
+  return p.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "\\\\'");
+}
+
+function clampDelogo(x, y, w, h, width, height) {
+  // delogo filter has a default band=1 that extends 1px beyond the specified area for interpolation.
+  // We must keep x >= 1, y >= 1, x+w <= width-2, y+h <= height-2 to avoid "outside of frame" error.
+  const band = 2; // margin for delogo band
+  x = Math.max(band, Math.min(x, width - band - 1));
+  y = Math.max(band, Math.min(y, height - band - 1));
+  w = Math.min(w, width - x - band);
+  h = Math.min(h, height - y - band);
+  return { x, y, w, h };
+}
+
+function buildDelogoFilter(delogoStr, width, height) {
+  if (!delogoStr) return '';
+  try {
+    const d = JSON.parse(delogoStr);
+    if (d.preset === 'both-top') {
+      // Left watermark: ~14% width, ~12% height
+      const l = clampDelogo(0, 0, Math.round(width * 0.14), Math.round(height * 0.12), width, height);
+      // Right watermark: ~12% width, ~14% height (IPPA logo is taller)
+      const rw = Math.round(width * 0.12);
+      const rh = Math.round(height * 0.14);
+      const r = clampDelogo(width - rw, 0, rw, rh, width, height);
+      return `delogo=x=${l.x}:y=${l.y}:w=${l.w}:h=${l.h},delogo=x=${r.x}:y=${r.y}:w=${r.w}:h=${r.h}`;
+    }
+    let x, y, w, h;
+    if (d.preset) {
+      w = Math.round(width * 0.14);
+      h = Math.round(height * 0.12);
+      switch (d.preset) {
+        case 'top-left':     x = 0; y = 0; break;
+        case 'top-right':    x = width - w; y = 0; break;
+        case 'bottom-left':  x = 0; y = height - h; break;
+        case 'bottom-right': x = width - w; y = height - h; break;
+        default: return '';
+      }
+    } else {
+      x = parseInt(d.x) || 0;
+      y = parseInt(d.y) || 0;
+      w = parseInt(d.w) || 200;
+      h = parseInt(d.h) || 36;
+    }
+    const c = clampDelogo(x, y, w, h, width, height);
+    return `delogo=x=${c.x}:y=${c.y}:w=${c.w}:h=${c.h}`;
+  } catch (_) {
+    return '';
+  }
+}
+
+function buildLogoFilter(logoScale) {
+  // Scale logo and apply rounded corners using geq alpha mask
+  // CR = corner radius (~15% of logo size)
+  // All commas escaped as \, for filter_complex context
+  const cr = Math.round(logoScale * 0.15);
+  const geq = [
+    `r=r(X\\,Y)`,
+    `g=g(X\\,Y)`,
+    `b=b(X\\,Y)`,
+    `a=if(gt(abs(X-W/2)\\,W/2-${cr})*gt(abs(Y-H/2)\\,H/2-${cr})\\,if(lte(hypot(abs(X-W/2)-(W/2-${cr})\\,abs(Y-H/2)-(H/2-${cr}))\\,${cr})\\,alpha(X\\,Y)\\,0)\\,alpha(X\\,Y))`,
+  ].join(':');
+  return `[1:v]scale=${logoScale}:-1,format=rgba,geq=${geq}[logo]`;
+}
+
+function probeResolution(inputPath, callback) {
+  execFile('ffprobe', [
+    '-v', 'error',
+    '-select_streams', 'v:0',
+    '-show_entries', 'stream=width,height',
+    '-of', 'csv=p=0',
+    inputPath,
+  ], { timeout: 30000 }, (err, stdout) => {
+    if (err || !stdout.trim()) return callback(1280, 720);
+    const [w, h] = stdout.trim().split(',').map(Number);
+    callback(w || 1280, h || 720);
+  });
+}
+
+function downloadFile(url, dest, callback) {
+  const mod = url.startsWith('https') ? https : http;
+  const file = fs.createWriteStream(dest);
+  mod.get(url, (res) => {
+    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+      file.close();
+      fs.unlinkSync(dest);
+      return downloadFile(res.headers.location, dest, callback);
+    }
+    if (res.statusCode !== 200) {
+      file.close();
+      fs.unlinkSync(dest);
+      return callback(new Error(`下载失败，状态码: ${res.statusCode}`));
+    }
+    res.pipe(file);
+    file.on('finish', () => file.close(() => callback(null)));
+  }).on('error', (err) => {
+    file.close();
+    try { fs.unlinkSync(dest); } catch (_) {}
+    callback(err);
+  });
+}
+
+// Burn subtitle from uploaded file
+router.post('/api/burn-subtitle', upload.fields([
+  { name: 'video', maxCount: 1 },
+  { name: 'subtitle', maxCount: 1 },
+]), (req, res) => {
+  const { start, end, delogo, language } = req.body;
+  const videoFile = req.files?.video?.[0];
+  const subtitleFile = req.files?.subtitle?.[0];
+
+  if (!videoFile || !subtitleFile || !start || !end) {
+    return res.status(400).json({ error: '缺少参数：需要视频文件、字幕文件、开始时间、结束时间' });
+  }
+
+  const outputName = `output_${Date.now()}.mp4`;
+  const outputPath = path.join(OUTPUT_DIR, outputName);
+  const subPath = escapeSubPath(subtitleFile.path);
+
+  probeResolution(videoFile.path, (width, height) => {
+    const delogoFilter = buildDelogoFilter(delogo, width, height);
+    const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
+    // Logo: scale to ~6% of video width, overlay top-right with 10px margin
+    const logoScale = Math.round(width * 0.06);
+    const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
+    const fc = `${baseFilter},${subFilter}[v]`;
+
+    const args = [
+      '-y',
+      '-i', videoFile.path,
+      '-i', LOGO_PATH,
+      '-ss', start,
+      '-to', end,
+      '-filter_complex', fc,
+      '-map', '[v]', '-map', '0:a',
+      outputPath,
+    ];
+
+    console.log('[Subtitle] Processing:', { start, end, delogo: !!delogoFilter, video: videoFile.originalname, subtitle: subtitleFile.originalname });
+
+    execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+      try { fs.unlinkSync(videoFile.path); } catch (_) {}
+      try { fs.unlinkSync(subtitleFile.path); } catch (_) {}
+
+      if (err) {
+        console.error('[Subtitle] FFmpeg error:', stderr || err.message);
+        return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
+      }
+
+      saveMeta(outputName, { start, end, video: videoFile.originalname, subtitle: subtitleFile.originalname, language: language || '' });
+      res.json({ ok: true, url: `/subtitle/output/${outputName}`, filename: outputName });
+    });
+  });
+});
+
+// Burn subtitle from URL
+router.post('/api/burn-subtitle-url', upload.fields([
+  { name: 'subtitle', maxCount: 1 },
+]), (req, res) => {
+  const { videoUrl, subtitleUrl, start, end, delogo, language } = req.body;
+  const subtitleFile = req.files?.subtitle?.[0];
+
+  if (!videoUrl || !start || !end) {
+    return res.status(400).json({ error: '缺少参数：需要视频链接、开始时间、结束时间' });
+  }
+  if (!subtitleFile && !subtitleUrl) {
+    return res.status(400).json({ error: '缺少参数：需要字幕文件或字幕链接' });
+  }
+
+  const outputName = `output_${Date.now()}.mp4`;
+  const outputPath = path.join(OUTPUT_DIR, outputName);
+
+  function processWithSubtitle(subFilePath) {
+    const subPath = escapeSubPath(subFilePath);
+
+    probeResolution(videoUrl, (width, height) => {
+      const delogoFilter = buildDelogoFilter(delogo, width, height);
+      const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
+      const logoScale = Math.round(width * 0.06);
+      const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
+      const fc = `${baseFilter},${subFilter}[v]`;
+
+      const args = [
+        '-y',
+        '-i', videoUrl,
+        '-i', LOGO_PATH,
+        '-ss', start,
+        '-to', end,
+        '-filter_complex', fc,
+        '-map', '[v]', '-map', '0:a',
+        outputPath,
+      ];
+
+      console.log('[Subtitle-URL] Processing:', { start, end, delogo: !!delogoFilter, videoUrl, subtitleUrl: subtitleUrl || 'file' });
+
+      execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+        try { fs.unlinkSync(subFilePath); } catch (_) {}
+
+        if (err) {
+          console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
+          return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
+        }
+
+        saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
+        res.json({ ok: true, url: `/subtitle/output/${outputName}`, filename: outputName });
+      });
+    });
+  }
+
+  if (subtitleFile) {
+    processWithSubtitle(subtitleFile.path);
+  } else {
+    // Download subtitle from URL
+    const ext = path.extname(new URL(subtitleUrl).pathname) || '.srt';
+    const subDest = path.join(UPLOAD_DIR, `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+    console.log('[Subtitle-URL] Downloading subtitle from:', subtitleUrl);
+    downloadFile(subtitleUrl, subDest, (err) => {
+      if (err) {
+        console.error('[Subtitle-URL] Subtitle download error:', err.message);
+        return res.status(400).json({ error: '字幕下载失败: ' + err.message });
+      }
+      processWithSubtitle(subDest);
+    });
+  }
+});
+
+// List generated files (history)
+router.get('/api/history', (req, res) => {
+  try {
+    const db = loadDB();
+    const files = fs.readdirSync(OUTPUT_DIR)
+      .filter(f => f.endsWith('.mp4'))
+      .map(f => {
+        try {
+          const stat = fs.statSync(path.join(OUTPUT_DIR, f));
+          const meta = db[f] || {};
+          return { filename: f, size: stat.size, created: meta.created || stat.mtimeMs, ...meta };
+        } catch (_) { return null; }
+      })
+      .filter(f => f && f.size > 10240)
+      .sort((a, b) => b.created - a.created)
+      .slice(0, 50);
+    res.json({ ok: true, files });
+  } catch (_) {
+    res.json({ ok: true, files: [] });
+  }
+});
+
+// Delete a generated file
+router.delete('/api/history/:filename', (req, res) => {
+  const filename = req.params.filename;
+  if (!/^output_\d+\.mp4$/.test(filename)) return res.status(400).json({ error: '无效文件名' });
+  const filePath = path.join(OUTPUT_DIR, filename);
+  try { fs.unlinkSync(filePath); } catch (_) {}
+  try { const db = loadDB(); delete db[filename]; saveDB(db); } catch (_) {}
+  res.json({ ok: true });
+});
+
+// Download output file
+router.get('/api/burn-subtitle/download/:filename', (req, res) => {
+  const filePath = path.join(OUTPUT_DIR, req.params.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).send('文件不存在');
+  res.download(filePath);
+});
+
+// Serve output files statically
+router.use('/output', express.static(OUTPUT_DIR));
+
+module.exports = router;

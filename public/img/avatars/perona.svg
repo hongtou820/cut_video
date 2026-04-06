@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0520"/>
+      <stop offset="100%" style="stop-color:#2d0a30"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#ff69b4;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Crown/tiara -->
+  <path d="M155 120 L165 90 L180 115 L200 80 L220 115 L235 90 L245 120" fill="#f1c40f" stroke="#d4a520" stroke-width="2"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="220" rx="72" ry="85" fill="#fce4b8"/>
+  <!-- Pink twintail hair -->
+  <path d="M125 180 Q135 100 175 130 Q190 85 215 125 Q240 95 260 130 Q275 100 275 180" fill="#ff69b4"/>
+  <!-- Twin tails going down -->
+  <path d="M125 180 Q100 200 90 300 Q85 350 95 420" fill="#ff69b4"/>
+  <path d="M275 180 Q300 200 310 300 Q315 350 305 420" fill="#ff69b4"/>
+  <!-- Hair curls -->
+  <circle cx="95" cy="420" r="20" fill="#ff69b4"/>
+  <circle cx="305" cy="420" r="20" fill="#ff69b4"/>
+  <!-- Big round eyes (gothic cute) -->
+  <ellipse cx="170" cy="220" rx="20" ry="22" fill="white"/>
+  <ellipse cx="230" cy="220" rx="20" ry="22" fill="white"/>
+  <circle cx="172" cy="218" r="14" fill="#c0392b"/>
+  <circle cx="232" cy="218" r="14" fill="#c0392b"/>
+  <circle cx="177" cy="213" r="5" fill="white"/>
+  <circle cx="237" cy="213" r="5" fill="white"/>
+  <!-- Eyelashes -->
+  <path d="M150 202 L146 194" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M155 199 L153 191" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M250 202 L254 194" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M245 199" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <!-- Mischievous smile -->
+  <path d="M178 260 Q200 278 222 260" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Blush -->
+  <ellipse cx="150" cy="245" rx="12" ry="8" fill="#ff9999" opacity="0.5"/>
+  <ellipse cx="250" cy="245" rx="12" ry="8" fill="#ff9999" opacity="0.5"/>
+  <!-- Body - gothic lolita dress -->
+  <path d="M140 300 Q200 288 260 300 L280 500 L120 500 Z" fill="#1a1a2e"/>
+  <!-- Lace frills -->
+  <path d="M140 300 Q160 310 180 300 Q200 310 220 300 Q240 310 260 300" fill="none" stroke="#ff69b4" stroke-width="2"/>
+  <!-- Corset lacing -->
+  <path d="M190 320 L210 340 L190 360 L210 380 L190 400" fill="none" stroke="#ff69b4" stroke-width="2"/>
+  <!-- Ghost (hollow) floating -->
+  <ellipse cx="80" cy="180" rx="20" ry="25" fill="white" opacity="0.3"/>
+  <circle cx="73" cy="175" r="3" fill="#333" opacity="0.3"/>
+  <circle cx="87" cy="175" r="3" fill="#333" opacity="0.3"/>
+  <path d="M73 185 Q80 192 87 185" fill="none" stroke="#333" stroke-width="1.5" opacity="0.3"/>
+  <ellipse cx="330" cy="160" rx="18" ry="22" fill="white" opacity="0.2"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="22" font-family="sans-serif" font-weight="bold" opacity="0.8">PERONA</text>
+</svg>

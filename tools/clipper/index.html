@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频切片 - AV BIU</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .clipper-page {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    .clipper-page h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 30%, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .clipper-page .desc {
+      color: var(--text2);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    /* Tab switcher */
+    .source-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      background: var(--bg3);
+      border-radius: 12px;
+      padding: 3px;
+      border: 1px solid var(--border);
+    }
+    .source-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text2);
+      cursor: pointer;
+      border-radius: 10px;
+      transition: all 0.2s;
+      border: none;
+      background: none;
+    }
+    .source-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+    .source-panel { display: none; }
+    .source-panel.active { display: block; }
+
+    .url-row {
+      display: flex;
+      gap: 8px;
+    }
+    .url-input {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .url-input:focus { border-color: var(--accent); }
+    .url-input::placeholder { color: var(--text3); }
+    .resolve-btn {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.3s;
+    }
+    .resolve-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(124,91,245,0.3);
+    }
+    .resolve-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* File upload */
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      color: var(--text2);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: var(--bg3);
+    }
+    .file-drop:hover, .file-drop.dragover {
+      border-color: var(--accent);
+      background: rgba(124,91,245,0.05);
+    }
+    .file-drop.has-file {
+      border-color: #2ecc71;
+      background: rgba(46,204,113,0.05);
+    }
+
+    .video-info {
+      display: none;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--bg3);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+    .video-info.show { display: block; }
+    .video-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .video-meta {
+      font-size: 12px;
+      color: var(--text3);
+    }
+    .preview-area {
+      display: none;
+      margin-bottom: 20px;
+    }
+    .preview-area.show { display: block; }
+    .preview-area video {
+      width: 100%;
+      border-radius: 10px;
+      max-height: 400px;
+      background: #000;
+    }
+    .time-row {
+      display: flex;
+      gap: 12px;
+    }
+    .time-row .form-group { flex: 1; }
+    .time-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 16px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .time-input:focus { border-color: var(--accent); }
+    .time-input::placeholder { color: var(--text3); }
+    .time-helper {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .time-helper button {
+      padding: 4px 10px;
+      background: var(--bg4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text2);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .time-helper button:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 12px;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(124,91,245,0.4);
+    }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .progress-area {
+      display: none;
+      margin-top: 24px;
+      text-align: center;
+    }
+    .progress-area.show { display: block; }
+    .progress-bar-wrap {
+      background: var(--bg3);
+      border-radius: 10px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .progress-bar-fill.indeterminate {
+      width: 100%;
+      animation: processing-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes processing-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .progress-text {
+      color: var(--text2);
+      font-size: 13px;
+    }
+    .result-area {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      background: var(--bg3);
+      border-radius: 14px;
+      border: 1px solid rgba(46,204,113,0.3);
+    }
+    .result-area.show { display: block; }
+    .result-area h3 {
+      color: #2ecc71;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+    .result-area video {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .download-btn {
+      display: inline-block;
+      padding: 10px 24px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .download-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(124,91,245,0.3);
+    }
+    .error-msg {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(255,68,68,0.1);
+      border: 1px solid rgba(255,68,68,0.3);
+      border-radius: 12px;
+      color: #ff4444;
+      font-size: 13px;
+    }
+    .error-msg.show { display: block; }
+    .history-section {
+      margin-top: 40px;
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+    }
+    .history-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .history-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .history-item-name {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-item-meta {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+    .history-item-actions {
+      display: flex;
+      gap: 6px;
+      margin-left: 12px;
+      flex-shrink: 0;
+    }
+    .history-item-actions a, .history-item-actions button {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .btn-play { background: rgba(124,91,245,0.15); color: var(--accent); }
+    .btn-dl { background: rgba(46,204,113,0.15); color: #2ecc71; }
+    .btn-del { background: rgba(255,68,68,0.1); color: #ff4444; }
+    .history-empty {
+      color: var(--text3);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">切</div>
+      <div class="logo-text">视频切片<span>Clipper</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item active" href="/">
+        <span class="nav-icon">✂️</span>视频切片
+      </a>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <div class="clipper-page">
+      <h1>视频切片工具</h1>
+      <p class="desc">上传视频或粘贴链接，选择时间范围，快速切片下载</p>
+
+      <!-- Source tabs -->
+      <div class="source-tabs">
+        <button class="source-tab active" onclick="switchTab('upload')">上传视频</button>
+        <button class="source-tab" onclick="switchTab('url')">粘贴链接</button>
+      </div>
+
+      <!-- Upload panel -->
+      <div class="source-panel active" id="panel-upload">
+        <div class="form-group">
+          <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+            拖拽视频文件到这里，或点击选择
+            <input type="file" id="fileInput" accept="video/*" style="display:none" onchange="handleFileSelect(this)">
+          </div>
+        </div>
+      </div>
+
+      <!-- URL panel -->
+      <div class="source-panel" id="panel-url">
+        <div class="form-group">
+          <div class="url-row">
+            <input type="text" class="url-input" id="urlInput" placeholder="粘贴抖音链接... 例如 https://v.douyin.com/xxx">
+            <button type="button" class="resolve-btn" id="resolveBtn" onclick="resolveUrl()">解析</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video Info -->
+      <div class="video-info" id="videoInfo">
+        <div class="video-title" id="videoTitle"></div>
+        <div class="video-meta" id="videoMeta"></div>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-area" id="previewArea">
+        <label style="display:block;font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:500;">视频预览</label>
+        <video id="previewVideo" controls></video>
+      </div>
+
+      <!-- Time Range -->
+      <div class="time-row">
+        <div class="form-group">
+          <label>开始时间</label>
+          <input type="text" class="time-input" id="startTime" placeholder="00:00:00" value="00:00:00">
+          <div class="time-helper">
+            <button type="button" onclick="setCurrentTime('start')">当前位置</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>结束时间</label>
+          <input type="text" class="time-input" id="endTime" placeholder="00:00:30">
+          <div class="time-helper">
+            <button type="button" onclick="setCurrentTime('end')">当前位置</button>
+            <button type="button" onclick="setEndToMax()">到结尾</button>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="submit-btn" id="clipBtn" onclick="clipVideo()" disabled>开始切片</button>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="progress-area" id="progressArea">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <p class="progress-text" id="progressText">处理中...</p>
+      </div>
+
+      <div class="result-area" id="resultArea">
+        <h3>切片完成</h3>
+        <video id="resultVideo" controls></video>
+        <a class="download-btn" id="downloadBtn" download>下载视频</a>
+      </div>
+
+      <!-- History -->
+      <div class="history-section">
+        <h2>切片历史</h2>
+        <div class="history-list" id="historyList">
+          <div class="history-empty">加载中...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let resolvedData = null;
+    let videoDuration = 0;
+    let currentMode = 'upload'; // 'upload' or 'url'
+    let selectedFile = null;
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function hideError() {
+      document.getElementById('errorMsg').classList.remove('show');
+    }
+
+    // Tab switching
+    function switchTab(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.source-tab').forEach((t, i) => {
+        t.classList.toggle('active', (i === 0 && mode === 'upload') || (i === 1 && mode === 'url'));
+      });
+      document.getElementById('panel-upload').classList.toggle('active', mode === 'upload');
+      document.getElementById('panel-url').classList.toggle('active', mode === 'url');
+    }
+
+    // File upload handling
+    const fileDrop = document.getElementById('fileDrop');
+    fileDrop.addEventListener('dragover', (e) => { e.preventDefault(); fileDrop.classList.add('dragover'); });
+    fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('dragover'));
+    fileDrop.addEventListener('drop', (e) => {
+      e.preventDefault();
+      fileDrop.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('video/')) handleFile(file);
+    });
+
+    function handleFileSelect(input) {
+      if (input.files[0]) handleFile(input.files[0]);
+    }
+
+    function handleFile(file) {
+      selectedFile = file;
+      fileDrop.textContent = `${file.name} (${formatSize(file.size)})`;
+      fileDrop.classList.add('has-file');
+
+      // Preview locally
+      const video = document.getElementById('previewVideo');
+      video.src = URL.createObjectURL(file);
+      document.getElementById('previewArea').classList.add('show');
+
+      video.onloadedmetadata = () => {
+        videoDuration = video.duration;
+        document.getElementById('endTime').value = secToHMS(videoDuration);
+        document.getElementById('videoInfo').classList.add('show');
+        document.getElementById('videoTitle').textContent = file.name;
+        document.getElementById('videoMeta').textContent = `时长: ${formatDuration(videoDuration)} · 大小: ${formatSize(file.size)}`;
+      };
+
+      document.getElementById('clipBtn').disabled = false;
+    }
+
+    function formatDuration(sec) {
+      if (!sec) return '--';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    function secToHMS(sec) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function setCurrentTime(which) {
+      const video = document.getElementById('previewVideo');
+      if (!video.src || video.readyState < 1) return;
+      const t = secToHMS(video.currentTime);
+      document.getElementById(which === 'start' ? 'startTime' : 'endTime').value = t;
+    }
+
+    function setEndToMax() {
+      if (videoDuration > 0) {
+        document.getElementById('endTime').value = secToHMS(videoDuration);
+      }
+    }
+
+    // URL resolve (for link mode)
+    async function resolveUrl() {
+      const rawUrl = document.getElementById('urlInput').value.trim();
+      if (!rawUrl) return showError('请粘贴视频链接');
+      hideError();
+
+      const btn = document.getElementById('resolveBtn');
+      btn.disabled = true;
+      btn.textContent = '解析中...';
+
+      try {
+        const resp = await fetch('/clipper/api/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: rawUrl }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.error || '解析失败');
+
+        resolvedData = data;
+        videoDuration = data.duration || 0;
+
+        document.getElementById('videoTitle').textContent = data.title || '未知标题';
+        document.getElementById('videoMeta').textContent = `时长: ${formatDuration(data.duration)}`;
+        document.getElementById('videoInfo').classList.add('show');
+
+        if (videoDuration > 0) {
+          document.getElementById('endTime').value = secToHMS(videoDuration);
+        }
+
+        if (data.videoUrl) {
+          const video = document.getElementById('previewVideo');
+          video.src = data.videoUrl;
+          document.getElementById('previewArea').classList.add('show');
+        }
+
+        document.getElementById('clipBtn').disabled = false;
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '解析';
+      }
+    }
+
+    // Clip video
+    async function clipVideo() {
+      const start = document.getElementById('startTime').value.trim();
+      const end = document.getElementById('endTime').value.trim();
+
+      if (!start || !end) return showError('请输入开始和结束时间');
+      if (!/^\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(start) || !/^\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(end)) {
+        return showError('时间格式不正确，请使用 HH:MM:SS');
+      }
+
+      hideError();
+      document.getElementById('resultArea').classList.remove('show');
+      document.getElementById('progressArea').classList.add('show');
+      document.getElementById('clipBtn').disabled = true;
+      document.getElementById('clipBtn').textContent = '处理中...';
+
+      const progressBar = document.getElementById('progressBarFill');
+      const progressText = document.getElementById('progressText');
+
+      try {
+        if (currentMode === 'upload' && selectedFile) {
+          // Upload file mode
+          progressText.textContent = '上传视频中...';
+          progressBar.style.width = '0%';
+          progressBar.classList.remove('indeterminate');
+
+          const formData = new FormData();
+          formData.append('video', selectedFile);
+          formData.append('start', start);
+          formData.append('end', end);
+
+          const xhr = new XMLHttpRequest();
+          const result = await new Promise((resolve, reject) => {
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                const pct = Math.round(e.loaded / e.total * 100);
+                progressBar.style.width = pct + '%';
+                progressText.textContent = `上传中... ${pct}%`;
+              }
+            });
+            xhr.addEventListener('load', () => {
+              try {
+                const data = JSON.parse(xhr.responseText);
+                if (xhr.status >= 200 && xhr.status < 300 && data.ok) resolve(data);
+                else reject(new Error(data.error || '切片失败'));
+              } catch (e) { reject(new Error('服务器返回异常')); }
+            });
+            xhr.addEventListener('error', () => reject(new Error('网络错误')));
+            xhr.open('POST', '/clipper/api/clip-upload');
+            xhr.send(formData);
+
+            progressBar.classList.add('indeterminate');
+            progressText.textContent = '正在切片...';
+          });
+
+          showResult(result);
+        } else {
+          // URL mode
+          const rawUrl = document.getElementById('urlInput').value.trim();
+          if (!rawUrl) return showError('请先粘贴并解析视频链接');
+
+          progressBar.classList.add('indeterminate');
+          progressText.textContent = '正在下载视频并切片，请稍候...';
+
+          const resp = await fetch('/clipper/api/clip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: rawUrl, start, end, title: resolvedData?.title || '' }),
+          });
+          const data = await resp.json();
+          if (!resp.ok || !data.ok) throw new Error(data.error || '切片失败');
+          showResult(data);
+        }
+      } catch (err) {
+        document.getElementById('progressArea').classList.remove('show');
+        showError(err.message);
+      } finally {
+        document.getElementById('clipBtn').disabled = false;
+        document.getElementById('clipBtn').textContent = '开始切片';
+      }
+    }
+
+    function showResult(data) {
+      document.getElementById('progressArea').classList.remove('show');
+      document.getElementById('resultVideo').src = data.url;
+      document.getElementById('downloadBtn').href = `/clipper/api/download/${data.filename}`;
+      document.getElementById('resultArea').classList.add('show');
+      loadHistory();
+    }
+
+    // History
+    function formatSize(bytes) {
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+    function truncStr(s, max) {
+      if (!s || s.length <= max) return s || '';
+      return s.slice(0, max - 3) + '...';
+    }
+
+    function loadHistory() {
+      fetch('/clipper/api/history').then(r => r.json()).then(data => {
+        const list = document.getElementById('historyList');
+        if (!data.ok || !data.files.length) {
+          list.innerHTML = '<div class="history-empty">暂无切片记录</div>';
+          return;
+        }
+        list.innerHTML = data.files.map(f => {
+          const timeRange = (f.start && f.end) ? `${f.start} ~ ${f.end}` : '';
+          const title = f.title ? truncStr(f.title, 40) : '';
+          return `
+          <div class="history-item" id="hi-${f.filename}">
+            <div class="history-item-info">
+              <div class="history-item-name">${title || formatTime(f.created)} · ${formatSize(f.size)}</div>
+              ${timeRange ? `<div class="history-item-meta">${timeRange}</div>` : ''}
+              ${!title ? '' : `<div class="history-item-meta">${formatTime(f.created)}</div>`}
+            </div>
+            <div class="history-item-actions">
+              <a class="btn-play" href="/clipper/output/${f.filename}" target="_blank">播放</a>
+              <a class="btn-dl" href="/clipper/api/download/${f.filename}" download>下载</a>
+              <button class="btn-del" onclick="deleteHistory('${f.filename}')">删除</button>
+            </div>
+          </div>`;
+        }).join('');
+      }).catch(() => {
+        document.getElementById('historyList').innerHTML = '<div class="history-empty">加载失败</div>';
+      });
+    }
+
+    function deleteHistory(filename) {
+      if (!confirm('确定删除？')) return;
+      fetch('/clipper/api/history/' + filename, { method: 'DELETE' }).then(r => r.json()).then(data => {
+        if (data.ok) {
+          const el = document.getElementById('hi-' + filename);
+          if (el) el.remove();
+          if (!document.querySelector('.history-item')) {
+            document.getElementById('historyList').innerHTML = '<div class="history-empty">暂无切片记录</div>';
+          }
+        }
+      });
+    }
+
+    // Auto-paste on focus
+    document.getElementById('urlInput').addEventListener('focus', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text && text.includes('douyin') && !document.getElementById('urlInput').value) {
+          document.getElementById('urlInput').value = text;
+        }
+      } catch (_) {}
+    });
+
+    loadHistory();
+  </script>
+</body>
+</html>

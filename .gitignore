@@ -1,0 +1,36 @@
+node_modules/
+.DS_Store
+.claude/
+.vscode/
+_bmad/
+*.log
+
+# subtitle tool
+tools/subtitle/uploads/
+tools/subtitle/output/
+tools/subtitle/db.json
+
+# clipper tool
+tools/clipper/downloads/
+tools/clipper/output/
+tools/clipper/db.json
+
+# comic scraper downloads & screenshots
+comic_scraper/downloads/
+comic_scraper/*.png
+comic_scraper/*.json
+
+# data
+data/
+
+# javrate scraper downloads, debug files, cache
+javrate_scraper/downloads/
+javrate_scraper/debug*.py
+javrate_scraper/debug*.png
+javrate_scraper/debug*.json
+javrate_scraper/__pycache__/
+javrate_scraper/state.json
+javrate_scraper/data/
+
+# cache images
+public/img/cache/

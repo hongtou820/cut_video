@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a1a"/>
+      <stop offset="100%" style="stop-color:#10102d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="220" rx="80" ry="95" fill="#fce4b8"/>
+  <!-- Blonde hair covering left eye -->
+  <path d="M120 180 Q130 100 180 120 Q190 80 220 100 Q250 70 260 120 Q280 100 280 180" fill="#f4d03f"/>
+  <!-- Hair bang covering left eye -->
+  <path d="M120 180 Q140 140 180 180 Q170 200 150 240 Q130 230 120 180" fill="#f4d03f"/>
+  <!-- Visible right eye -->
+  <ellipse cx="235" cy="220" rx="16" ry="18" fill="white"/>
+  <circle cx="237" cy="218" r="10" fill="#2980b9"/>
+  <circle cx="240" cy="215" r="3" fill="white"/>
+  <!-- Curly eyebrow (right) -->
+  <path d="M215 198 Q230 185 250 195 Q255 188 260 195" fill="none" stroke="#f4d03f" stroke-width="3" stroke-linecap="round"/>
+  <!-- Slight smirk -->
+  <path d="M185 270 Q210 285 240 272" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cigarette -->
+  <rect x="240" y="268" width="45" height="4" rx="2" fill="#fff" transform="rotate(-10, 240, 270)"/>
+  <circle cx="283" cy="263" r="5" fill="#ff6b00" opacity="0.8"/>
+  <!-- Goatee -->
+  <path d="M190 285 Q200 300 210 285" fill="#f4d03f" opacity="0.6"/>
+  <!-- Body - black suit -->
+  <path d="M130 310 Q200 295 270 310 L290 500 L110 500 Z" fill="#1a1a2e"/>
+  <!-- Suit lapels -->
+  <path d="M200 310 L170 380 L200 500" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M200 310 L230 380 L200 500" fill="none" stroke="#333" stroke-width="2"/>
+  <!-- Blue shirt -->
+  <path d="M185 310 L180 500 L220 500 L215 310" fill="#2980b9"/>
+  <!-- Tie -->
+  <path d="M195 320 L200 340 L205 320" fill="#1a1a1a"/>
+  <path d="M195 340 L200 420 L205 340" fill="#1a1a1a"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">SANJI</text>
+</svg>

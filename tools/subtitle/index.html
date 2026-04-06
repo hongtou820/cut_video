@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>字幕烧录 - AV BIU</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .subtitle-page {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+    .subtitle-page h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 30%, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle-page .desc {
+      color: var(--text2);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      color: var(--text2);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: var(--bg3);
+    }
+    .file-drop:hover,
+    .file-drop.dragover {
+      border-color: var(--accent);
+      background: rgba(124,91,245,0.08);
+    }
+    .file-drop.has-file {
+      border-color: #2ecc71;
+      background: rgba(46,204,113,0.06);
+      color: #2ecc71;
+    }
+    .file-drop input[type="file"] {
+      display: none;
+    }
+    .time-row {
+      display: flex;
+      gap: 12px;
+    }
+    .time-row .form-group {
+      flex: 1;
+    }
+    .time-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 16px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .time-input:focus {
+      border-color: var(--accent);
+    }
+    .time-input::placeholder {
+      color: var(--text3);
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 12px;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(124,91,245,0.4);
+    }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .progress-area {
+      display: none;
+      margin-top: 24px;
+      text-align: center;
+    }
+    .progress-area.show {
+      display: block;
+    }
+    .progress-bar-wrap {
+      background: var(--bg3);
+      border-radius: 10px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .progress-bar-fill.processing {
+      width: 100% !important;
+      animation: processing-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes processing-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .progress-text {
+      color: var(--text2);
+      font-size: 13px;
+    }
+    .result-area {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      background: var(--bg3);
+      border-radius: 14px;
+      border: 1px solid rgba(46,204,113,0.3);
+    }
+    .result-area.show {
+      display: block;
+    }
+    .result-area h3 {
+      color: #2ecc71;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+    .result-area video {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .download-btn {
+      display: inline-block;
+      padding: 10px 24px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .download-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(124,91,245,0.3);
+    }
+    .error-msg {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(255,68,68,0.1);
+      border: 1px solid rgba(255,68,68,0.3);
+      border-radius: 12px;
+      color: #ff4444;
+      font-size: 13px;
+    }
+    .error-msg.show {
+      display: block;
+    }
+    .history-section {
+      margin-top: 40px;
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+    }
+    .history-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .history-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .history-item-name {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .history-item-meta {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+    }
+    .history-item-actions {
+      display: flex;
+      gap: 6px;
+      margin-left: 12px;
+      flex-shrink: 0;
+    }
+    .history-item-actions a, .history-item-actions button {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .btn-play {
+      background: rgba(124,91,245,0.15);
+      color: var(--accent);
+    }
+    .btn-dl {
+      background: rgba(46,204,113,0.15);
+      color: #2ecc71;
+    }
+    .btn-del {
+      background: rgba(255,68,68,0.1);
+      color: #ff4444;
+    }
+    .history-empty {
+      color: var(--text3);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">次</div>
+      <div class="logo-text">次元聊<span>CiYuanChat</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item active" href="/subtitle">
+        <span class="nav-icon">🎬</span>字幕烧录
+      </a>
+      <a class="nav-item" href="/clipper">
+        <span class="nav-icon">✂️</span>视频切片
+      </a>
+    </nav>
+  </aside>
+
+  <div class="main-content">
+    <div class="subtitle-page">
+      <h1>字幕烧录工具</h1>
+      <p class="desc">上传视频和字幕文件，指定时间范围，生成带字幕的视频</p>
+
+      <!-- Mode toggle -->
+      <div class="mode-toggle" style="display:flex;gap:8px;margin-bottom:24px;">
+        <button type="button" class="filter-pill active" id="modeFile" onclick="switchMode('file')">上传文件</button>
+        <button type="button" class="filter-pill" id="modeUrl" onclick="switchMode('url')">视频链接</button>
+      </div>
+
+      <form id="burnForm">
+        <!-- Video file -->
+        <div class="form-group" id="videoFileGroup">
+          <label>视频文件</label>
+          <div class="file-drop" id="videoDrop">
+            <span id="videoLabel">点击或拖拽上传视频文件 (mp4, mkv, avi ...)</span>
+            <input type="file" id="videoInput" accept="video/*">
+          </div>
+        </div>
+
+        <!-- Video URL -->
+        <div class="form-group" id="videoUrlGroup" style="display:none;">
+          <label>视频链接</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" class="time-input" id="videoUrlInput" placeholder="https://example.com/video.mp4" style="font-family:inherit;font-size:14px;flex:1;">
+            <button type="button" class="submit-btn" id="previewBtn" style="width:auto;padding:12px 20px;margin-top:0;font-size:14px;" onclick="previewVideo()">预览</button>
+          </div>
+        </div>
+
+        <!-- Video preview -->
+        <div class="form-group" id="previewArea" style="display:none;">
+          <label>视频预览</label>
+          <video id="previewVideo" controls style="width:100%;border-radius:10px;max-height:360px;background:#000;"></video>
+        </div>
+
+        <!-- Subtitle file (file mode) -->
+        <div class="form-group" id="subtitleFileGroup">
+          <label>字幕文件</label>
+          <div class="file-drop" id="subtitleDrop">
+            <span id="subtitleLabel">点击或拖拽上传字幕文件 (srt, ass, vtt ...)</span>
+            <input type="file" id="subtitleInput" accept=".srt,.ass,.ssa,.vtt,.sub">
+          </div>
+        </div>
+
+        <!-- Subtitle URL (url mode) -->
+        <div class="form-group" id="subtitleUrlGroup" style="display:none;">
+          <label>字幕链接</label>
+          <input type="text" class="time-input" id="subtitleUrlInput" placeholder="https://example.com/subtitle.srt" style="font-family:inherit;font-size:14px;">
+        </div>
+
+        <!-- Delogo (watermark removal) -->
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="delogoCheck" checked style="width:16px;height:16px;accent-color:var(--accent);">
+            去水印
+          </label>
+        </div>
+        <div id="delogoOptions" style="margin-bottom:20px;">
+          <div class="form-group">
+            <label>水印位置</label>
+            <select id="delogoPreset" class="time-input" style="font-family:inherit;font-size:14px;" onchange="onDelogoPreset()">
+              <option value="both-top">左上角 + 右上角</option>
+              <option value="top-left">仅左上角</option>
+              <option value="top-right">仅右上角</option>
+              <option value="bottom-right">右下角</option>
+              <option value="bottom-left">左下角</option>
+              <option value="custom">自定义坐标</option>
+            </select>
+          </div>
+          <div class="time-row" id="delogoCustom" style="display:none;">
+            <div class="form-group">
+              <label>X</label>
+              <input type="number" class="time-input" id="delogoX" placeholder="0" value="0">
+            </div>
+            <div class="form-group">
+              <label>Y</label>
+              <input type="number" class="time-input" id="delogoY" placeholder="0" value="0">
+            </div>
+            <div class="form-group">
+              <label>宽</label>
+              <input type="number" class="time-input" id="delogoW" placeholder="200" value="200">
+            </div>
+            <div class="form-group">
+              <label>高</label>
+              <input type="number" class="time-input" id="delogoH" placeholder="36" value="36">
+            </div>
+          </div>
+        </div>
+
+        <!-- Time range -->
+        <div class="time-row">
+          <div class="form-group">
+            <label>开始时间</label>
+            <input type="text" class="time-input" id="startTime" placeholder="00:00:00" value="00:00:00">
+          </div>
+          <div class="form-group">
+            <label>结束时间</label>
+            <input type="text" class="time-input" id="endTime" placeholder="00:05:00">
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">开始烧录</button>
+      </form>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="progress-area" id="progressArea">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <p class="progress-text" id="progressText">准备中...</p>
+      </div>
+
+      <div class="result-area" id="resultArea">
+        <h3>处理完成</h3>
+        <video id="resultVideo" controls></video>
+        <a class="download-btn" id="downloadBtn" download>下载视频</a>
+      </div>
+
+      <!-- History -->
+      <div class="history-section">
+        <h2>生成历史</h2>
+        <div class="history-list" id="historyList">
+          <div class="history-empty">加载中...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'file';
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('modeFile').classList.toggle('active', mode === 'file');
+      document.getElementById('modeUrl').classList.toggle('active', mode === 'url');
+      document.getElementById('videoFileGroup').style.display = mode === 'file' ? '' : 'none';
+      document.getElementById('videoUrlGroup').style.display = mode === 'url' ? '' : 'none';
+      document.getElementById('subtitleFileGroup').style.display = mode === 'file' ? '' : 'none';
+      document.getElementById('subtitleUrlGroup').style.display = mode === 'url' ? '' : 'none';
+      document.getElementById('previewArea').style.display = 'none';
+    }
+
+    function previewVideo() {
+      const url = document.getElementById('videoUrlInput').value.trim();
+      if (!url) return showError('请输入视频链接');
+      hideError();
+      const preview = document.getElementById('previewVideo');
+      preview.src = url;
+      document.getElementById('previewArea').style.display = '';
+    }
+
+    const form = document.getElementById('burnForm');
+    const videoInput = document.getElementById('videoInput');
+    const subtitleInput = document.getElementById('subtitleInput');
+    const videoDrop = document.getElementById('videoDrop');
+    const subtitleDrop = document.getElementById('subtitleDrop');
+    const videoLabel = document.getElementById('videoLabel');
+    const subtitleLabel = document.getElementById('subtitleLabel');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressArea = document.getElementById('progressArea');
+    const resultArea = document.getElementById('resultArea');
+    const resultVideo = document.getElementById('resultVideo');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const progressBarFill = document.getElementById('progressBarFill');
+    const progressText = document.getElementById('progressText');
+
+    // File drop zones
+    function setupDrop(dropEl, inputEl, labelEl) {
+      dropEl.addEventListener('click', () => inputEl.click());
+      dropEl.addEventListener('dragover', (e) => { e.preventDefault(); dropEl.classList.add('dragover'); });
+      dropEl.addEventListener('dragleave', () => dropEl.classList.remove('dragover'));
+      dropEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropEl.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          inputEl.files = e.dataTransfer.files;
+          onFileSelected(inputEl, dropEl, labelEl);
+        }
+      });
+      inputEl.addEventListener('change', () => onFileSelected(inputEl, dropEl, labelEl));
+    }
+
+    function onFileSelected(inputEl, dropEl, labelEl) {
+      if (inputEl.files.length) {
+        const f = inputEl.files[0];
+        const sizeMB = (f.size / 1024 / 1024).toFixed(1);
+        labelEl.textContent = `${f.name} (${sizeMB}MB)`;
+        dropEl.classList.add('has-file');
+      }
+    }
+
+    setupDrop(videoDrop, videoInput, videoLabel);
+    setupDrop(subtitleDrop, subtitleInput, subtitleLabel);
+
+    function resetUI() {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '开始烧录';
+      progressBarFill.classList.remove('processing');
+    }
+
+    function onResult(xhr) {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 200 && xhr.status < 300 && data.ok) {
+          progressArea.classList.remove('show');
+          resultVideo.src = data.url;
+          downloadBtn.href = `/subtitle/api/burn-subtitle/download/${data.filename}`;
+          resultArea.classList.add('show');
+          loadHistory();
+        } else {
+          progressArea.classList.remove('show');
+          showError(data.error || '处理失败');
+        }
+      } catch {
+        progressArea.classList.remove('show');
+        showError('服务器返回异常');
+      }
+      resetUI();
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const subtitle = subtitleInput.files[0];
+      const subtitleUrl = document.getElementById('subtitleUrlInput').value.trim();
+      const start = document.getElementById('startTime').value.trim();
+      const end = document.getElementById('endTime').value.trim();
+      // Validate subtitle
+      if (currentMode === 'file' && !subtitle) return showError('请选择字幕文件');
+      if (currentMode === 'url' && !subtitle && !subtitleUrl) return showError('请输入字幕链接或上传字幕文件');
+      if (!start || !end) return showError('请输入开始和结束时间');
+      if (!/^\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(start) || !/^\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(end)) {
+        return showError('时间格式不正确，请使用 HH:MM:SS 格式');
+      }
+
+      hideError();
+      resultArea.classList.remove('show');
+      progressArea.classList.add('show');
+      progressBarFill.style.width = '0%';
+      progressBarFill.classList.remove('processing');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '处理中...';
+
+      if (currentMode === 'url') {
+        // URL mode
+        const videoUrl = document.getElementById('videoUrlInput').value.trim();
+        if (!videoUrl) return showError('请输入视频链接') || resetUI();
+
+        progressBarFill.classList.add('processing');
+        progressText.textContent = '服务器正在下载视频并烧录字幕...';
+
+        const formData = new FormData();
+        if (subtitle) {
+          formData.append('subtitle', subtitle);
+        } else {
+          formData.append('subtitleUrl', subtitleUrl);
+        }
+        formData.append('videoUrl', videoUrl);
+        formData.append('start', start);
+        formData.append('end', end);
+
+        const delogo = getDelogoParams();
+        if (delogo) formData.append('delogo', JSON.stringify(delogo));
+
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener('load', () => onResult(xhr));
+        xhr.addEventListener('error', () => { progressArea.classList.remove('show'); showError('网络错误'); resetUI(); });
+        xhr.addEventListener('timeout', () => { progressArea.classList.remove('show'); showError('请求超时'); resetUI(); });
+        xhr.open('POST', '/subtitle/api/burn-subtitle-url');
+        xhr.timeout = 1200000;
+        xhr.send(formData);
+
+      } else {
+        // File upload mode
+        const video = videoInput.files[0];
+        if (!video) return showError('请选择视频文件') || resetUI();
+
+        progressText.textContent = '准备上传...';
+
+        const formData = new FormData();
+        formData.append('video', video);
+        formData.append('subtitle', subtitle);
+        formData.append('start', start);
+        formData.append('end', end);
+
+        const delogo2 = getDelogoParams();
+        if (delogo2) formData.append('delogo', JSON.stringify(delogo2));
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round(e.loaded / e.total * 100);
+            progressBarFill.style.width = pct + '%';
+            const loadedMB = (e.loaded / 1024 / 1024).toFixed(1);
+            const totalMB = (e.total / 1024 / 1024).toFixed(1);
+            progressText.textContent = `上传中... ${loadedMB}MB / ${totalMB}MB (${pct}%)`;
+          }
+        });
+
+        xhr.upload.addEventListener('load', () => {
+          progressBarFill.style.width = '100%';
+          progressBarFill.classList.add('processing');
+          progressText.textContent = 'FFmpeg 正在烧录字幕，请稍候...';
+        });
+
+        xhr.addEventListener('load', () => onResult(xhr));
+        xhr.addEventListener('error', () => { progressArea.classList.remove('show'); showError('网络错误，上传失败'); resetUI(); });
+        xhr.addEventListener('timeout', () => { progressArea.classList.remove('show'); showError('请求超时'); resetUI(); });
+        xhr.open('POST', '/subtitle/api/burn-subtitle');
+        xhr.timeout = 1200000;
+        xhr.send(formData);
+      }
+    });
+
+    // Delogo toggle
+    document.getElementById('delogoCheck').addEventListener('change', (e) => {
+      document.getElementById('delogoOptions').style.display = e.target.checked ? '' : 'none';
+    });
+    function onDelogoPreset() {
+      document.getElementById('delogoCustom').style.display =
+        document.getElementById('delogoPreset').value === 'custom' ? '' : 'none';
+    }
+    function getDelogoParams() {
+      if (!document.getElementById('delogoCheck').checked) return null;
+      const preset = document.getElementById('delogoPreset').value;
+      if (preset === 'custom') {
+        return {
+          x: document.getElementById('delogoX').value,
+          y: document.getElementById('delogoY').value,
+          w: document.getElementById('delogoW').value,
+          h: document.getElementById('delogoH').value,
+        };
+      }
+      return { preset };
+    }
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('show');
+    }
+    function hideError() {
+      errorMsg.classList.remove('show');
+    }
+
+    // History
+    function formatSize(bytes) {
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+      return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+    const LANG_MAP = { zh: '中文', en: 'English', ja: '日本語', ko: '한국어', th: 'ไทย', ru: 'Русский', es: 'Español', vi: 'Tiếng Việt', id: 'Indonesia' };
+    function formatTime(ts) {
+      const d = new Date(ts);
+      return d.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+    function truncUrl(url, max) {
+      if (!url || url.length <= max) return url || '';
+      return url.slice(0, max - 3) + '...';
+    }
+    function loadHistory() {
+      fetch('/subtitle/api/history').then(r => r.json()).then(data => {
+        const list = document.getElementById('historyList');
+        if (!data.ok || !data.files.length) {
+          list.innerHTML = '<div class="history-empty">暂无生成记录</div>';
+          return;
+        }
+        list.innerHTML = data.files.map(f => {
+          const timeRange = (f.start && f.end) ? `${f.start} ~ ${f.end}` : '';
+          const lang = f.language ? (LANG_MAP[f.language] || f.language) : '';
+          const video = f.videoUrl ? truncUrl(f.videoUrl, 50) : (f.video || '');
+          const sub = f.subtitleUrl ? truncUrl(f.subtitleUrl, 50) : (f.subtitle || '');
+          return `
+          <div class="history-item" id="hi-${f.filename}">
+            <div class="history-item-info">
+              <div class="history-item-name">${formatTime(f.created)} · ${formatSize(f.size)}</div>
+              ${timeRange ? `<div class="history-item-meta">${timeRange}</div>` : ''}
+              ${video ? `<div class="history-item-meta">${video}</div>` : ''}
+              ${sub ? `<div class="history-item-meta">${sub}</div>` : ''}
+              ${lang ? `<div class="history-item-meta">语言= ${lang}</div>` : ''}
+            </div>
+            <div class="history-item-actions">
+              <a class="btn-play" href="/subtitle/output/${f.filename}" target="_blank">播放</a>
+              <a class="btn-dl" href="/subtitle/api/burn-subtitle/download/${f.filename}" download>下载</a>
+              <button class="btn-del" onclick="deleteHistory('${f.filename}')">删除</button>
+            </div>
+          </div>`;
+        }).join('');
+      }).catch(() => {
+        document.getElementById('historyList').innerHTML = '<div class="history-empty">加载失败</div>';
+      });
+    }
+    function deleteHistory(filename) {
+      if (!confirm('确定删除？')) return;
+      fetch('/subtitle/api/history/' + filename, { method: 'DELETE' }).then(r => r.json()).then(data => {
+        if (data.ok) {
+          const el = document.getElementById('hi-' + filename);
+          if (el) el.remove();
+          if (!document.querySelector('.history-item')) {
+            document.getElementById('historyList').innerHTML = '<div class="history-empty">暂无生成记录</div>';
+          }
+        }
+      });
+    }
+    loadHistory();
+  </script>
+</body>
+</html>

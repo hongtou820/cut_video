@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0a14"/>
+      <stop offset="100%" style="stop-color:#2d0d22"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#e91e8b;stop-opacity:0.25"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Antlers -->
+  <path d="M140 120 L120 60 L130 80 L110 40" fill="none" stroke="#8b6914" stroke-width="8" stroke-linecap="round"/>
+  <path d="M260 120 L280 60 L270 80 L290 40" fill="none" stroke="#8b6914" stroke-width="8" stroke-linecap="round"/>
+  <!-- Pink hat -->
+  <ellipse cx="200" cy="145" rx="85" ry="30" fill="#e91e8b"/>
+  <path d="M140 145 Q200 80 260 145" fill="#e91e8b"/>
+  <!-- X on hat -->
+  <line x1="185" y1="105" x2="215" y2="135" stroke="white" stroke-width="5" stroke-linecap="round"/>
+  <line x1="215" y1="105" x2="185" y2="135" stroke="white" stroke-width="5" stroke-linecap="round"/>
+  <!-- Face - round and cute -->
+  <circle cx="200" cy="250" r="95" fill="#fce4b8"/>
+  <!-- Brown fur patches -->
+  <circle cx="145" cy="210" r="30" fill="#8b6914" opacity="0.3"/>
+  <circle cx="255" cy="210" r="30" fill="#8b6914" opacity="0.3"/>
+  <!-- Big round eyes -->
+  <circle cx="170" cy="240" r="25" fill="white"/>
+  <circle cx="230" cy="240" r="25" fill="white"/>
+  <circle cx="175" cy="237" r="16" fill="#2c2c2c"/>
+  <circle cx="235" cy="237" r="16" fill="#2c2c2c"/>
+  <circle cx="180" cy="232" r="6" fill="white"/>
+  <circle cx="240" cy="232" r="6" fill="white"/>
+  <circle cx="172" cy="242" r="3" fill="white"/>
+  <circle cx="232" cy="242" r="3" fill="white"/>
+  <!-- Blue nose -->
+  <ellipse cx="200" cy="270" rx="14" ry="10" fill="#3498db"/>
+  <ellipse cx="196" cy="267" rx="5" ry="3" fill="#5dade2" opacity="0.6"/>
+  <!-- Happy mouth -->
+  <path d="M180 290 Q200 310 220 290" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Blush -->
+  <ellipse cx="155" cy="270" rx="15" ry="10" fill="#ff9999" opacity="0.5"/>
+  <ellipse cx="245" cy="270" rx="15" ry="10" fill="#ff9999" opacity="0.5"/>
+  <!-- Body - small, cute -->
+  <ellipse cx="200" cy="420" rx="65" ry="80" fill="#8b6914"/>
+  <ellipse cx="200" cy="420" rx="45" ry="65" fill="#fce4b8"/>
+  <!-- Little hooves -->
+  <ellipse cx="160" cy="480" rx="15" ry="10" fill="#8b6914"/>
+  <ellipse cx="240" cy="480" rx="15" ry="10" fill="#8b6914"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">CHOPPER</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0515"/>
+      <stop offset="100%" style="stop-color:#2d0a25"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#e84393;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="220" rx="72" ry="88" fill="#fce4b8"/>
+  <!-- Pink hair - short bob with bangs -->
+  <path d="M125 185 Q135 90 175 120 Q190 75 215 110 Q240 70 260 115 Q278 90 278 185" fill="#e84393"/>
+  <path d="M125 185 Q118 240 125 290" fill="#e84393"/>
+  <path d="M278 185 Q285 240 278 290" fill="#e84393"/>
+  <!-- Swooping bangs -->
+  <path d="M130 185 Q160 165 190 185" fill="#e84393"/>
+  <path d="M165 185 Q185 170 200 185" fill="#e84393"/>
+  <!-- Eyes - seductive, confident -->
+  <ellipse cx="170" cy="222" rx="16" ry="17" fill="white"/>
+  <ellipse cx="230" cy="222" rx="16" ry="17" fill="white"/>
+  <circle cx="172" cy="220" r="11" fill="#3498db"/>
+  <circle cx="232" cy="220" r="11" fill="#3498db"/>
+  <circle cx="175" cy="216" r="4" fill="white"/>
+  <circle cx="235" cy="216" r="4" fill="white"/>
+  <!-- Curly eyebrow (Vinsmoke trait) - only showing right -->
+  <path d="M215 205 Q230 193 248 202 Q252 196 258 200" fill="none" stroke="#e84393" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Left eyebrow hidden by hair -->
+  <path d="M155 205 Q170 195 185 205" fill="none" stroke="#e84393" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Long eyelashes -->
+  <path d="M154 210 L150 203" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M159 207 L157 200" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M246 210 L250 203" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M241 207" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <!-- Smirk -->
+  <path d="M180 260 Q200 272 225 258" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Lips -->
+  <path d="M185 262 Q200 268 218 260" fill="#e84393" opacity="0.4"/>
+  <!-- Body - Germa raid suit -->
+  <path d="M138 305 Q200 292 262 305 L268 500 L132 500 Z" fill="#e84393"/>
+  <!-- Suit details - white accents -->
+  <path d="M200 305 L200 500" stroke="white" stroke-width="2" opacity="0.3"/>
+  <circle cx="200" cy="340" r="8" fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
+  <!-- Number 0 (Reiju = 0) -->
+  <text x="200" y="345" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="bold" opacity="0.5">0</text>
+  <!-- Cape flowing -->
+  <path d="M132 305 Q100 380 110 500" fill="#d63384" opacity="0.5"/>
+  <path d="M268 305 Q300 380 290 500" fill="#d63384" opacity="0.5"/>
+  <!-- Butterfly motif (poison pink) -->
+  <path d="M185 420 Q175 405 185 390 Q200 405 185 420" fill="#e84393" opacity="0.3"/>
+  <path d="M215 420 Q225 405 215 390 Q200 405 215 420" fill="#e84393" opacity="0.3"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">REIJU</text>
+</svg>

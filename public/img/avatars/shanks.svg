@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0505"/>
+      <stop offset="100%" style="stop-color:#2d0a0a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#c0392b;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="230" rx="85" ry="95" fill="#f5deb3"/>
+  <!-- Red hair - long -->
+  <path d="M110 190 Q120 90 170 120 Q180 70 210 100 Q230 60 260 110 Q290 80 290 190" fill="#c0392b"/>
+  <path d="M110 190 Q105 260 115 310" fill="#c0392b"/>
+  <path d="M290 190 Q295 260 285 310" fill="#c0392b"/>
+  <!-- Three scars over left eye -->
+  <line x1="148" y1="205" x2="155" y2="255" stroke="#8b0000" stroke-width="3" stroke-linecap="round"/>
+  <line x1="158" y1="205" x2="165" y2="255" stroke="#8b0000" stroke-width="3" stroke-linecap="round"/>
+  <line x1="168" y1="205" x2="175" y2="255" stroke="#8b0000" stroke-width="3" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <ellipse cx="165" cy="230" rx="14" ry="15" fill="white"/>
+  <ellipse cx="235" cy="230" rx="16" ry="17" fill="white"/>
+  <circle cx="167" cy="228" r="9" fill="#2c2c2c"/>
+  <circle cx="237" cy="228" r="10" fill="#2c2c2c"/>
+  <circle cx="169" cy="225" r="3" fill="white"/>
+  <circle cx="239" cy="225" r="3" fill="white"/>
+  <!-- Warm smile -->
+  <path d="M165 275 Q200 305 240 275" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  <!-- Stubble -->
+  <rect x="175" y="285" width="50" height="15" rx="5" fill="#c0392b" opacity="0.15"/>
+  <!-- Body - black cape -->
+  <path d="M100 320 Q200 300 300 320 L310 500 L90 500 Z" fill="#1a1a1a"/>
+  <!-- White shirt underneath -->
+  <path d="M160 320 L155 500 L245 500 L240 320" fill="#f5f5f5"/>
+  <!-- Left arm missing (cape drapes) -->
+  <path d="M100 320 Q80 400 90 500" fill="#1a1a1a"/>
+  <!-- Sake cup in right hand -->
+  <ellipse cx="310" cy="400" rx="15" ry="10" fill="#f5deb3"/>
+  <path d="M295 400 Q310 420 325 400" fill="none" stroke="#ddd" stroke-width="2"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">SHANKS</text>
+</svg>

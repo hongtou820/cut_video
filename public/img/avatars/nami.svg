@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1000"/>
+      <stop offset="100%" style="stop-color:#2d1c00"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#f39c12;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="220" rx="75" ry="88" fill="#fce4b8"/>
+  <!-- Orange long hair -->
+  <path d="M120 180 Q130 90 170 120 Q185 70 210 100 Q235 65 255 110 Q275 85 280 180" fill="#f39c12"/>
+  <path d="M120 180 Q110 250 115 340" fill="#f39c12"/>
+  <path d="M280 180 Q290 250 285 340" fill="#f39c12"/>
+  <!-- Hair bangs -->
+  <path d="M135 180 Q155 155 175 180" fill="#f39c12"/>
+  <path d="M175 180 Q195 160 210 180" fill="#f39c12"/>
+  <!-- Big beautiful eyes -->
+  <ellipse cx="170" cy="225" rx="18" ry="20" fill="white"/>
+  <ellipse cx="230" cy="225" rx="18" ry="20" fill="white"/>
+  <circle cx="173" cy="222" r="12" fill="#8b4513"/>
+  <circle cx="233" cy="222" r="12" fill="#8b4513"/>
+  <circle cx="177" cy="218" r="4" fill="white"/>
+  <circle cx="237" cy="218" r="4" fill="white"/>
+  <circle cx="170" cy="228" r="2" fill="white"/>
+  <circle cx="230" cy="228" r="2" fill="white"/>
+  <!-- Eyelashes -->
+  <path d="M152 210 L148 204" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M156 207 L154 200" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M248 207 L250 200" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <path d="M244 210 L246 204" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <!-- Cute eyebrows -->
+  <path d="M155 205 Q170 195 188 205" fill="none" stroke="#e67e22" stroke-width="3" stroke-linecap="round"/>
+  <path d="M212 205 Q230 195 248 205" fill="none" stroke="#e67e22" stroke-width="3" stroke-linecap="round"/>
+  <!-- Smile -->
+  <path d="M175 262 Q200 280 225 262" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Lips -->
+  <path d="M185 265 Q200 270 215 265" fill="#e74c9a" opacity="0.4"/>
+  <!-- Tangerine tattoo on left shoulder -->
+  <circle cx="120" cy="340" r="8" fill="#f39c12" opacity="0.8"/>
+  <path d="M118 332 Q120 326 122 332" fill="#27ae60" opacity="0.8"/>
+  <!-- Body -->
+  <path d="M135 305 Q200 290 265 305 L275 500 L125 500 Z" fill="#2980b9"/>
+  <!-- Bikini top style -->
+  <path d="M150 310 Q175 325 200 310 Q225 325 250 310" fill="#2980b9" stroke="#2471a3" stroke-width="2"/>
+  <!-- Necklace -->
+  <path d="M155 305 Q200 315 245 305" fill="none" stroke="#f1c40f" stroke-width="2"/>
+  <!-- Berry sign ($$$) -->
+  <text x="200" y="400" text-anchor="middle" fill="#f1c40f" font-size="36" font-family="serif" opacity="0.3">$$$</text>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">NAMI</text>
+</svg>

@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>次元聊 CiYuanChat - AI 二次元角色聊天</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">次</div>
+      <div class="logo-text">次元聊<span>CiYuanChat</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item active"><span class="nav-icon">🏠</span>发现角色</a>
+      <a class="nav-item" href="/story.html"><span class="nav-icon">📖</span>角色故事</a>
+      <a class="nav-item" onclick="filterChars('female')"><span class="nav-icon">👧</span>女性角色</a>
+      <a class="nav-item" onclick="filterChars('male')"><span class="nav-icon">👦</span>男性角色</a>
+      <a class="nav-item" href="/subtitle.html"><span class="nav-icon">🎬</span>字幕烧录</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <a class="nav-item" onclick="showSettings()"><span class="nav-icon">⚙</span>AI 设置</a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Top bar -->
+    <div class="topbar">
+      <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <div class="topbar-filters">
+        <button class="filter-pill active" onclick="filterChars('all', this)">全部</button>
+        <button class="filter-pill" onclick="filterChars('female', this)">女生</button>
+        <button class="filter-pill" onclick="filterChars('male', this)">男生</button>
+      </div>
+      <div class="topbar-right">
+        <span class="user-count"><span class="online-dot"></span><span id="charCount">0</span> 位角色在线</span>
+        <button class="settings-btn" onclick="showSettings()">⚙</button>
+      </div>
+    </div>
+
+    <!-- Stories Row -->
+    <div class="stories-row" id="storiesRow"></div>
+
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+      <div class="hero-content">
+        <h1>遇见你的 AI 二次元伙伴</h1>
+        <p>125+ 海贼王角色 · 多模型支持 · 沉浸式角色扮演对话</p>
+        <div class="hero-avatars" id="heroAvatars"></div>
+        <button class="hero-btn" onclick="filterChars('female')">开始探索</button>
+      </div>
+      <div class="hero-glow"></div>
+      <div class="hero-glow hero-glow2"></div>
+    </div>
+
+    <!-- Character Grid -->
+    <div class="char-grid" id="charGrid"></div>
+  </main>
+
+  <!-- Story Viewer -->
+  <div class="story-viewer" id="storyViewer">
+    <div class="sv-progress" id="svProgress"></div>
+    <button class="sv-close" onclick="closeStory()">×</button>
+    <div class="sv-content" id="svContent">
+      <img class="sv-bg" id="svBg" src="" />
+      <div class="sv-overlay">
+        <div class="sv-header">
+          <img class="sv-avatar" id="svAvatar" src="" />
+          <div class="sv-info">
+            <div class="sv-name" id="svName"></div>
+            <div class="sv-time" id="svTime"></div>
+          </div>
+        </div>
+        <div class="sv-body">
+          <div class="sv-scene" id="svScene"></div>
+          <div class="sv-text" id="svText"></div>
+        </div>
+        <div class="sv-footer">
+          <button class="sv-chat-btn" id="svChatBtn">💬 和TA聊天</button>
+        </div>
+      </div>
+    </div>
+    <button class="sv-nav sv-prev" onclick="prevStory()">‹</button>
+    <button class="sv-nav sv-next" onclick="nextStory()">›</button>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h3>AI 模型设置</h3>
+      <label>选择 AI 模型</label>
+      <select id="providerSelect" onchange="onProviderChange()">
+        <option value="anthropic">Claude (Anthropic)</option>
+        <option value="openai">GPT (OpenAI)</option>
+        <option value="gemini">Gemini (Google)</option>
+        <option value="deepseek">DeepSeek</option>
+      </select>
+      <div id="keySection-anthropic" class="key-section">
+        <label>Anthropic API Key</label>
+        <input type="password" id="apiKey-anthropic" placeholder="sk-ant-api03-..." />
+        <p class="key-hint">在 console.anthropic.com 获取密钥</p>
+      </div>
+      <div id="keySection-openai" class="key-section" style="display:none">
+        <label>OpenAI API Key</label>
+        <input type="password" id="apiKey-openai" placeholder="sk-..." />
+        <p class="key-hint">在 platform.openai.com 获取密钥</p>
+      </div>
+      <div id="keySection-gemini" class="key-section" style="display:none">
+        <label>Google Gemini API Key</label>
+        <input type="password" id="apiKey-gemini" placeholder="AIza..." />
+        <p class="key-hint">在 aistudio.google.com 获取密钥</p>
+      </div>
+      <div id="keySection-deepseek" class="key-section" style="display:none">
+        <label>DeepSeek API Key</label>
+        <input type="password" id="apiKey-deepseek" placeholder="sk-..." />
+        <p class="key-hint">在 platform.deepseek.com 获取密钥</p>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="hideSettings()">取消</button>
+        <button class="btn-save" onclick="saveSettings()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allChars = [];
+    let currentFilter = 'all';
+
+    async function loadCharacters() {
+      const resp = await fetch('/api/characters');
+      allChars = await resp.json();
+      document.getElementById('charCount').textContent = allChars.length;
+      // Sort: women first by default
+      allChars.sort((a, b) => {
+        if (a.gender === 'female' && b.gender !== 'female') return -1;
+        if (a.gender !== 'female' && b.gender === 'female') return 1;
+        return 0;
+      });
+      renderChars(allChars);
+      renderStories();
+      renderHeroAvatars();
+    }
+
+    function renderChars(chars) {
+      const grid = document.getElementById('charGrid');
+      grid.innerHTML = chars.map(c => `
+        <div class="char-card" onclick="openDetail('${c.id}')" data-gender="${c.gender}">
+          <div class="char-card-img">
+            <img src="${c.image}" alt="${c.name}" loading="lazy"
+              onerror="this.style.display='none';this.parentElement.style.background='${c.gradient}'" />
+            <div class="card-overlay">
+              <div class="card-status"><span class="online-dot"></span>在线</div>
+              <div class="card-bottom">
+                <div class="card-name">${c.name}</div>
+                <div class="card-title">${c.title}</div>
+                <div class="card-tags">
+                  ${c.tags.map(t => `<span class="card-tag">${t}</span>`).join('')}
+                </div>
+                <div class="card-action">
+                  <span class="card-chat-btn">💬 聊天</span>
+                  <span class="card-detail-btn">查看详情 →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterChars(gender, btn) {
+      currentFilter = gender;
+      // Update pills
+      document.querySelectorAll('.filter-pill').forEach(t => t.classList.remove('active'));
+      if (btn) {
+        btn.classList.add('active');
+      } else {
+        document.querySelectorAll('.filter-pill').forEach(t => {
+          if ((gender === 'all' && t.textContent === '全部') ||
+              (gender === 'female' && t.textContent === '女生') ||
+              (gender === 'male' && t.textContent === '男生')) {
+            t.classList.add('active');
+          }
+        });
+      }
+      // Update sidebar
+      document.querySelectorAll('.sidebar-nav .nav-item').forEach((n, i) => {
+        n.classList.remove('active');
+        if ((gender === 'all' && i === 0) || (gender === 'female' && i === 2) || (gender === 'male' && i === 3))
+          n.classList.add('active');
+      });
+
+      const filtered = gender === 'all' ? allChars : allChars.filter(c => c.gender === gender);
+      renderChars(filtered);
+      // Also update stories to match filter
+      renderStories();
+    }
+
+    function openDetail(id) {
+      window.location.href = `/detail.html?id=${id}`;
+    }
+
+    function onProviderChange() {
+      const provider = document.getElementById('providerSelect').value;
+      document.querySelectorAll('.key-section').forEach(s => s.style.display = 'none');
+      document.getElementById(`keySection-${provider}`).style.display = 'block';
+    }
+
+    function showSettings() { document.getElementById('settingsModal').classList.add('show'); }
+    function hideSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+    function saveSettings() {
+      const provider = document.getElementById('providerSelect').value;
+      const key = document.getElementById(`apiKey-${provider}`).value.trim();
+      if (key) {
+        localStorage.setItem('ai_provider', provider);
+        localStorage.setItem(`apikey_${provider}`, key);
+        if (provider === 'anthropic') localStorage.setItem('anthropic_api_key', key);
+        hideSettings();
+      }
+    }
+
+    document.getElementById('settingsModal').addEventListener('click', function(e) {
+      if (e.target === this) hideSettings();
+    });
+
+    // Load saved settings
+    const savedProvider = localStorage.getItem('ai_provider') || 'anthropic';
+    document.getElementById('providerSelect').value = savedProvider;
+    onProviderChange();
+    ['anthropic','openai','gemini','deepseek'].forEach(p => {
+      const k = localStorage.getItem(`apikey_${p}`);
+      if (k) document.getElementById(`apiKey-${p}`).value = k;
+    });
+    const oldKey = localStorage.getItem('anthropic_api_key');
+    if (oldKey && !localStorage.getItem('apikey_anthropic')) {
+      localStorage.setItem('apikey_anthropic', oldKey);
+      document.getElementById('apiKey-anthropic').value = oldKey;
+    }
+
+    // ===== Instagram-style Short Stories =====
+    // Each character has a pool of stories; 3 random ones are picked per character on each page load
+    const STORY_POOL = {
+      luffy: [
+        { scene: '厨房里偷吃', text: '嘿嘿嘿，山治做的肉太好吃了！我要成为海贼王的男人，先吃饱再说！🍖' },
+        { scene: '船头', text: '大海啊！今天也是充满冒险的一天！我闻到了冒险的味道！' },
+        { scene: '草地上午睡', text: 'Zzz...肉...再来一块...嘿嘿...' },
+        { scene: '战斗中', text: '我的伙伴，一个都不能少！橡胶橡胶...火箭炮！！！' },
+        { scene: '宴会上', text: '宴会！宴会！大家一起吃肉喝酒唱歌！这就是海贼的快乐！🎉' },
+        { scene: '面对强敌', text: '就算你再强，我也不会退后一步。因为我身后有我的伙伴！' },
+        { scene: '看星空', text: '艾斯...萨博...你们看到了吗？我越来越接近海贼王了！⭐' },
+        { scene: '德雷斯罗萨', text: '我不是英雄！英雄是要把肉分给别人吃的人！我要自己吃！' },
+      ],
+      nami: [
+        { scene: '阳光号甲板上', text: '今天的航海日志：发现了一座被云层环绕的神秘岛屿，罗盘指针疯狂旋转... 这一定是座宝岛！💰' },
+        { scene: '绘制海图', text: '等我画完世界地图的那一天...一定是最美的风景。' },
+        { scene: '购物中', text: '打折！全场五折！这种好事怎么能错过！大家的钱都交给我保管吧～💳' },
+        { scene: '暴风雨前', text: '风向变了...3小时后会有暴风雨。全员准备！转舵30度！' },
+        { scene: '数钱中', text: '1亿...2亿...嘿嘿嘿，贝利的味道真好闻～' },
+        { scene: '看日落', text: '贝尔梅尔小姐...我现在正在追逐自己的梦想呢。🍊' },
+        { scene: '天候棒实验', text: '新型天候棒完成！这次的威力应该能让那些笨蛋们大吃一惊。⚡' },
+        { scene: '温泉', text: '终于可以放松一下了...航海真的太累了。不过这就是冒险的魅力吧～♨️' },
+      ],
+      zoro: [
+        { scene: '迷路中', text: '我没有迷路！是这条路自己走偏了！...话说这里是哪？🗡️' },
+        { scene: '修炼', text: '三千世界...还不够。我要变得更强，强到没有人能打败我。' },
+        { scene: '喝酒', text: '好酒。这种辛辣感...让我想起了跟鹰眼的那一战。🍶' },
+        { scene: '午睡', text: '......Zzz（即使睡着了，手也紧握着刀）' },
+        { scene: '瞭望台', text: '成为世界第一大剑豪...库伊娜，我离约定越来越近了。' },
+        { scene: '又迷路了', text: '奇怪，厕所明明在左边...为什么我到了船头？' },
+        { scene: '举铁', text: '每天一万次挥刀...还不够。再加一万次。💪' },
+        { scene: '对峙', text: '让开，别挡我的路。我没有时间跟弱者浪费。' },
+      ],
+      hancock: [
+        { scene: '九蛇岛温泉', text: '路飞...今天的风也在说你的名字。什么时候才能再见到你呢...💕' },
+        { scene: '蛇姬城堡', text: '我是天下第一美女，这是无可争议的事实。（但路飞好像不太在意...）' },
+        { scene: '想路飞', text: '路飞...路飞...路飞...（已经念了第1000遍了）💗' },
+        { scene: '发呆中', text: '如果路飞来九蛇岛...我要给他做最好吃的料理！虽然我不会做...😳' },
+        { scene: '霸气全开', text: '谁敢对路飞不敬，我就石化他！霸王色的资格，不是说说而已。' },
+        { scene: '看海', text: '大海的那一边，路飞正在冒险吧...我也想跟他一起去。' },
+        { scene: '生气', text: '什么！有女人跟路飞说话了？！她是谁？！在哪里？！😤' },
+        { scene: '害羞', text: '如...如果路飞跟我告白的话...我...我才不会答应呢！（会的）' },
+      ],
+      robin: [
+        { scene: '图书馆', text: '发现了一块古代文字的碎片...这上面记载的内容令人不寒而栗。历史的真相，到底是什么？📚' },
+        { scene: '考古现场', text: '这块碑文记录了800年前的空白历史...真相就快揭开了。' },
+        { scene: '喝咖啡', text: '安静的午后，一杯咖啡，一本好书。这就是最幸福的时光。☕' },
+        { scene: '甲板上', text: '花花果实·千紫万红...呵呵，偶尔也要活动一下身体。🌸' },
+        { scene: '逗乔巴', text: '乔巴真可爱...让我抱抱好不好？（伸出无数只手）' },
+        { scene: '历史研究', text: '空白的100年...D之一族...古代兵器...所有的谜题都指向同一个答案。' },
+        { scene: '微笑', text: '我想活下去！...这是我这辈子说过最勇敢的话。如今，我找到了值得为之而活的伙伴。' },
+        { scene: '读报纸', text: '世界政府又在隐瞒什么了...真是有趣。呵呵。' },
+      ],
+      sanji: [
+        { scene: '厨房', text: 'Nami小姐～Robin小姐～今天为你们准备了特制的法式甜点！请尽情享用♪ 🍰' },
+        { scene: '做料理', text: '料理是爱。每一道菜都要倾注全部的心意。这是我作为厨师的信念。👨‍🍳' },
+        { scene: '发现美女', text: 'Mellorine～～～！那边那位美丽的小姐，请让我为你献上一朵玫瑰！🌹' },
+        { scene: '抽烟', text: '臭老头子...你教我的一切，我都记着呢。All Blue，我一定会找到的。' },
+        { scene: '踢路飞', text: '别偷吃！！那是给Nami小姐和Robin小姐准备的！给我出去！！🦵' },
+        { scene: '骑士精神', text: '我绝对不会踢女人。就算因此而死...这是男人的骑士道。' },
+        { scene: '深夜厨房', text: '一个人的厨房...适合思考人生。All Blue到底在哪里呢...' },
+        { scene: '对决', text: '恶魔风脚！地狱般的火焰！这一脚，是为了保护我的伙伴！🔥' },
+      ],
+      ace: [
+        { scene: '某个港口', text: '路飞那家伙...又在闹什么事了吧。作为哥哥，真是操心不完。不过，这就是弟弟可爱的地方啊🔥' },
+        { scene: '火拳', text: '我是白胡子的儿子！这份骄傲，谁也夺不走！' },
+        { scene: '回忆', text: '我出生在这个世界上，到底是对的吗...？老爹告诉我：活着就是答案。' },
+        { scene: '黎明时分', text: '萨博、路飞...我们三兄弟的羁绊，比什么都坚固。🏴‍☠️' },
+        { scene: '篝火旁', text: '白胡子海贼团的伙伴们...谢谢你们爱着像我这样的人。' },
+        { scene: '大海上', text: '自由的感觉真好...这片大海，就是我的归宿。' },
+        { scene: '吃饭中', text: '...Zzz（吃着吃着就睡着了，脸直接扑进碗里）' },
+        { scene: '微笑', text: '路飞...谢谢你。能成为你的哥哥，是我一生中最幸运的事。' },
+      ],
+      chopper: [
+        { scene: '医务室', text: '呜哇！才不是因为被夸了就开心呢！笨蛋！...（但是好开心）🩺' },
+        { scene: '研究新药', text: '万能药...一定存在的！我要成为能治好任何病的医生！' },
+        { scene: '被吓到', text: '哇啊啊啊！鬼！有鬼！...啊，是布鲁克啊...不要吓我啊！😱' },
+        { scene: '跟路飞玩', text: '路飞！乌索普！等等我！我也要一起钓鱼！🎣' },
+        { scene: '采药草', text: '这种药草只在冬天的雪山才有...Dr.库蕾哈教我的知识真有用！🌿' },
+        { scene: '变身', text: '蓝波球！重量强化！看我的力量！...诶，怎么变错了？' },
+        { scene: '看樱花', text: 'Dr.西鲁鲁克...你看到了吗？樱花开了...🌸' },
+        { scene: '棉花糖', text: '不要叫我棉花糖！我是驯鹿！...虽然确实软软的...' },
+      ],
+      law: [
+        { scene: '潜水艇', text: '草帽当...同盟不代表你可以随便乱来。下一步计划已经制定好了，别搞砸了。' },
+        { scene: 'ROOM', text: 'ROOM...Shambles。在我的领域内，一切尽在掌控。' },
+        { scene: '看报纸', text: '四皇的动向...世界政府的阴谋...每一步都要精确计算。' },
+        { scene: '叹气', text: '为什么每次跟草帽当合作，计划都会变得一团糟...？' },
+        { scene: '回忆', text: '柯拉先生...你用生命赐予我的自由，我绝不会浪费。' },
+        { scene: '手术台', text: '作为外科医生，生死只在一刀之间。不允许有任何失误。🔪' },
+        { scene: '喝水', text: '不喝面包，不吃米饭。我讨厌面包...只是个人喜好而已。' },
+        { scene: '计划', text: 'D的意志...到底是什么？总有一天我会找到答案。' },
+      ],
+      yamato: [
+        { scene: '鬼之城堡屋顶', text: '我终于自由了！大海在召唤我！我要像御田大人一样，踏上冒险之旅！⚡' },
+        { scene: '看航海日志', text: '御田大人的航海日志...每一页都让我热血沸腾！我也要去看这广阔的世界！' },
+        { scene: '冰鬼', text: '凯多老头子，我不会再被你关住了。自由的大海，我来了！❄️' },
+        { scene: '和路飞说话', text: '路飞！带我一起出海吧！我等这一天等了20年！' },
+        { scene: '看日出', text: '和之国的日出真美...但我相信外面的世界有更壮观的风景在等着我。🌅' },
+        { scene: '回忆艾斯', text: '艾斯告诉过我，路飞一定会来的...他没有说错。' },
+        { scene: '修炼', text: '雷鸣八卦！我要比凯多更强！用我自己的方式！' },
+        { scene: '自由', text: '自由的味道...是咸咸的海风味。这就是我一直向往的气息。🌊' },
+      ],
+      uta: [
+        { scene: '舞台上', text: '用歌声连接所有人的心... 这首新歌，献给所有追逐梦想的人！🎤✨' },
+        { scene: '作曲中', text: '这个旋律...总觉得少了什么。要加入更多的感情才行。🎵' },
+        { scene: '回忆', text: '香克斯...我虽然生你的气，但你教会了我最重要的东西——音乐的力量。' },
+        { scene: '演唱会', text: '大家！跟我一起唱！让全世界都听到我们的声音！🎶' },
+        { scene: '练歌', text: 'Do Re Mi Fa Sol La Ti Do～ 嗯，今天的嗓子状态不错！' },
+        { scene: '看信', text: '来自世界各地歌迷的信...每一封都是我继续唱下去的动力。💌' },
+        { scene: '弹吉他', text: '这把吉他是香克斯留给我的...每次弹起它，都能感觉到大海的气息。🎸' },
+        { scene: '新世界', text: '我要让歌声到达新世界的每一个角落！没有人应该孤独！' },
+      ],
+      shanks: [
+        { scene: '红发号', text: '新时代已经开始了...路飞，你的冒险才刚刚开始呢。等你变得更强，再来找我吧。🍶' },
+        { scene: '喝酒', text: '来，干杯！为了新时代的海贼们！🍺' },
+        { scene: '回忆', text: '路飞...这顶草帽，是我最珍贵的宝物。现在它在最好的地方。' },
+        { scene: '四皇会面', text: '我来了，是为了结束这一切。新的时代...该开始了。' },
+        { scene: '海上', text: '大海永远不会拒绝任何人。只要你有勇气出发，就一定能找到答案。' },
+        { scene: '霸气', text: '（只是站在那里，周围的杂兵就已经昏倒了）...啊，不小心的。' },
+        { scene: '给路飞的信', text: '路飞，我在终点等你。不管你花多久，我都不会先离开。' },
+        { scene: '宴会', text: '海贼嘛...最重要的就是快乐！来，大家一起唱歌跳舞！🎊' },
+      ],
+      sabo: [
+        { scene: '革命军总部', text: '世界政府的暴政...我会用这双手终结它。这是我选择的正义。🔥' },
+        { scene: '回忆', text: '艾斯、路飞...三兄弟的誓言，我一天都没有忘记过。' },
+        { scene: '练习龙爪', text: '龙爪拳...还要更快、更强。为了保护想保护的人。' },
+        { scene: '看报纸', text: '路飞又上新闻了！哈哈，不愧是我弟弟！干得漂亮！📰' },
+        { scene: '燃烧', text: '艾斯的火焰...烧烧果实...我会继承你的意志，一直燃烧下去！' },
+        { scene: '潜入', text: '天龙人的秘密...比我想象的更加黑暗。但真相必须被揭露。' },
+        { scene: '微笑', text: '自由...这个词对我来说有着特别的意义。我不会再被任何牢笼束缚。' },
+        { scene: '训练', text: '参谋总长的责任很重...但比起责任，我更在意的是能不能保护好弟弟。' },
+      ],
+      bonney: [
+        { scene: '吃披萨', text: '啊呜啊呜...这个披萨太好吃了！再来十个！🍕' },
+        { scene: '变身', text: '年龄果实真方便～想变多大就多大，想变多小就多小！' },
+        { scene: '找老爹', text: '大熊...爸爸...我一定会找到救你的方法。等我！' },
+        { scene: '生气', text: '世界政府！你们对我爸爸做了什么！我绝对不会原谅你们！😡' },
+        { scene: '扮幼女', text: '嘻嘻～变成小孩子的话，就可以免费吃自助餐了～真是太聪明了！' },
+        { scene: '哭泣', text: '爸爸...你还记得小时候给我做的炖菜吗...我好想再吃一次...😢' },
+        { scene: '战斗', text: '别小看我！我可是最恶世代之一！年龄果实的力量比你想象的强多了！' },
+        { scene: '吃冰淇淋', text: '巧克力味、草莓味、香草味...全部都要！人生就是要享受美食！🍦' },
+      ],
+      vivi: [
+        { scene: '阿拉巴斯坦王宫', text: '作为公主，我要守护这片土地上每一个人的笑容。这是我的使命。👑' },
+        { scene: '看海', text: '草帽海贼团...大家都还好吗？我永远是你们的伙伴。🕊️' },
+        { scene: '治理国家', text: '和平来之不易...我要努力让阿拉巴斯坦成为最幸福的国家。' },
+        { scene: '想念伙伴', text: '左手上的标记...×的印记...永远是我们友谊的证明！✕' },
+        { scene: '沙漠散步', text: '卡鲁在沙漠里跑得好快啊～等等我！🐫' },
+        { scene: '外交会议', text: '世界会议上有太多秘密了...但我不能退缩，为了我的国家。' },
+        { scene: '跳孔雀舞', text: '这是阿拉巴斯坦的传统舞蹈～虽然我跳得不太好...💃' },
+        { scene: '写信', text: '亲爱的大家...我写了一封很长的信，但又觉得文字不够表达我的思念...✉️' },
+      ],
+      perona: [
+        { scene: '幽灵城堡', text: '消极鬼！让所有人都变得消极吧！...其实我自己有时候也挺消极的。👻' },
+        { scene: '做玩偶', text: '这个新的幽灵熊好可爱！粉色的蝴蝶结配上黑色的眼睛，完美！🧸' },
+        { scene: '吐槽', text: '索隆那个路痴又迷路了...为什么我要照顾他啊真是的！' },
+        { scene: '哥特装', text: '今天穿哪件好呢...黑色洛丽塔还是暗红色哥特风？当然两件都好看！🖤' },
+        { scene: '发脾气', text: '讨厌讨厌讨厌！为什么大家都不听我的！消极鬼大爆发！' },
+        { scene: '看鹰眼', text: '鹰眼大人真的好帅...啊不是！我才没有这样想！' },
+        { scene: '弹钢琴', text: '幽灵城堡的夜晚...只有钢琴声和幽灵们陪伴我...其实挺浪漫的。🎹' },
+        { scene: '可爱控', text: '那个毛绒玩具太可爱了！给我给我给我！我全都要！💕' },
+      ],
+      reiju: [
+        { scene: '杰尔马城堡', text: '山治...你是杰尔马唯一拥有人类之心的人。请好好珍惜这份感情。🦋' },
+        { scene: '毒之吻', text: '毒粉红...这个力量既是诅咒也是祝福。至少我能保护重要的人。' },
+        { scene: '看月亮', text: '母亲给了我感情...这是我唯一的财富，也是最珍贵的礼物。🌙' },
+        { scene: '实验室', text: '血统因子的改造...父亲的野心...我们终究是实验品吗？' },
+        { scene: '喝红酒', text: '优雅是一种态度。即使在战场上，也不能失去从容。🍷' },
+        { scene: '微笑', text: '山治，去追逐你的梦想吧。All Blue一定存在的。' },
+        { scene: '战斗', text: '不要小看杰尔马66的科学力量...毒粉红，全开！' },
+        { scene: '叹息', text: '如果我也能像普通女孩一样生活...不，这样的假设没有意义。' },
+      ],
+      shirahoshi: [
+        { scene: '龙宫城', text: '路飞大人...你答应过要带我去看真正的森林的...我一直在等你哦。🐠' },
+        { scene: '哭泣', text: '呜呜呜...�的...太感动了...（眼泪像瀑布一样）😭' },
+        { scene: '跟鱼说话', text: '小鱼们今天也很精神呢～让我们一起唱歌吧！🐟' },
+        { scene: '看太阳', text: '太阳好温暖...地上的世界真的好美。我好想再去看看。☀️' },
+        { scene: '海王类', text: '它们...在呼唤我。大海里的巨大生物...似乎在对我说话。🐋' },
+        { scene: '害怕', text: '呜...有好可怕的声音...路飞大人，你在哪里...😰' },
+        { scene: '祈祷', text: '希望所有人都能和平相处...人鱼和人类...一定能理解彼此的。🙏' },
+        { scene: '开心', text: '路飞大人说我是他的朋友！朋友诶！太开心了！🌺' },
+      ],
+      pudding: [
+        { scene: '甜品店', text: '这个巧克力蛋糕...需要再加一点可可粉。嗯，完美。🍫' },
+        { scene: '三只眼', text: '我的第三只眼...山治说它很美。世界上真有这么温柔的人吗...？' },
+        { scene: '矛盾', text: '我到底是好人还是坏人？...连我自己都分不清了。' },
+        { scene: '记忆果实', text: '抹去了那段记忆...但心里某个地方，还是隐隐作痛。💔' },
+        { scene: '做甜点', text: '要做世界上最好吃的甜点！...然后有一天，让那个人也尝尝。🎂' },
+        { scene: '哭', text: '为什么要对我这么温柔...笨蛋...大笨蛋...😢' },
+        { scene: '伪装', text: '哼，我才不在乎什么山治呢！...（偷偷看了一眼他的悬赏令）' },
+        { scene: '烘焙', text: '料理就是科学。每一克糖、每一度温度都很重要。这一点，我跟他很像。' },
+      ],
+      koala: [
+        { scene: '革命军基地', text: '鱼人空手道的修行永无止境！今天也要努力训练！💪' },
+        { scene: '跟萨博', text: '萨博！又在偷懒了！报告还没写完呢，给我认真一点！' },
+        { scene: '微笑', text: '曾经我连笑都不敢...现在我能发自内心地笑了。谢谢你们。😊' },
+        { scene: '任务中', text: '革命的道路很漫长...但每一步都是有意义的。加油！' },
+        { scene: '看海', text: '大海对我来说曾经是恐惧的象征...现在它是自由的颜色。🌊' },
+        { scene: '训练', text: '鱼人空手道！哈！这一拳包含了我所有的决心！' },
+        { scene: '读书', text: '了解历史才能改变未来。这是龙先生教给我的。📖' },
+        { scene: '生气', text: '什么！天龙人又在欺负平民了？！这种事我绝对不允许！😤' },
+      ],
+      carrot: [
+        { scene: '瞭望台', text: '月亮好圆啊！...等等，我现在不能看月亮！会变身的！🐰' },
+        { scene: '兴奋', text: '大海！冒险！好激动好激动好激动！嘎鲁啾！！' },
+        { scene: '咬人', text: '我不是故意咬你的！...好吧可能是故意的。嘿嘿。' },
+        { scene: '吃胡萝卜', text: '胡萝卜果然是世界上最好吃的东西！没有之一！🥕' },
+        { scene: 'Sulong', text: '满月之力...苏隆形态！佩德罗的意志，我来继承！✨' },
+        { scene: '蹦蹦跳跳', text: '今天天气真好！适合在甲板上蹦蹦跳跳！生活就是要充满活力！' },
+        { scene: '想佩德罗', text: '佩德罗...黎明一定会到来的。你说过的。我相信你。🌅' },
+        { scene: '电击', text: '嘎鲁啾电击！！哈哈，被电到了吧！⚡' },
+      ],
+      baby5: [
+        { scene: '被需要', text: '你...你需要我吗？真的需要我吗？！太好了！我什么都愿意做！😍' },
+        { scene: '武器变身', text: '武器果实...剑、枪、大炮，你需要什么我就变什么！' },
+        { scene: '被告白', text: '什么！你说你需要我？！那我们结婚吧！（第108次了）💒' },
+        { scene: '哭着', text: '为什么大家都不需要我...我有那么没用吗...😢' },
+        { scene: '认真', text: '赛先生说他需要我...这一次，是真心的吧？' },
+        { scene: '战斗', text: '为了被需要的人，我会拼尽全力！武器变身——导弹！💣' },
+        { scene: '幻想', text: '如果有人对我说"我需要你"...我一定会幸福得飞起来！☁️' },
+        { scene: '日常', text: '打扫、洗衣、做饭...只要是被需要的事，我全都喜欢做！🧹' },
+      ],
+      tashigi: [
+        { scene: '练剑', text: '名刀收集之路还很漫长...时雨是把好刀。我要变得配得上它。⚔️' },
+        { scene: '跌倒', text: '哎呀！...眼镜掉了...什么都看不见了...谁来帮帮我...👓' },
+        { scene: '正义', text: '海军的正义...不应该只是口号。我要用自己的方式守护和平。' },
+        { scene: '遇到索隆', text: '罗罗诺亚！你到底把名刀当什么了！气死我了！！😤' },
+        { scene: '巡逻', text: '斯摩格先生！发现可疑人物！...啊，是猫。🐱' },
+        { scene: '擦剑', text: '每一把名刀都有灵魂...我要成为能听懂它们声音的剑士。' },
+        { scene: '看海', text: '库伊娜...你说女剑士永远比不上男剑士...我要证明你错了。' },
+        { scene: '训练', text: '一千次...两千次...挥刀的次数还不够。再来！💪' },
+      ],
+      franky: [
+        { scene: '造船', text: '这艘船要用最好的宝树亚当！SUPER！！这就是男人的浪漫！🔧' },
+        { scene: '变形', text: '弗兰奇将军！合体完成！这就是科学的力量！SUPER～！🤖' },
+        { scene: '感动', text: '不准说让我感动的话！我才不会哭！...呜呜呜...😭' },
+        { scene: '喝可乐', text: '可乐是我的燃料！没有可乐就没有SUPER的弗兰奇！🥤' },
+        { scene: '设计图', text: '桑尼号的下一次改造...要加个什么新功能呢？游泳池？大炮？都要！' },
+        { scene: '跳舞', text: '今晚的主题是——SUPER DANCE！大家一起嗨起来！💃' },
+        { scene: '回忆', text: '汤姆先生...你教会了我造船的意义。船就是梦想的载体。' },
+        { scene: '内裤', text: '穿内裤就够了！这是我的风格！SUPER变态！...不对，是SUPER！' },
+      ],
+      brook: [
+        { scene: '拉小提琴', text: '虽然我已经是骷髅了...但只要音乐还在，灵魂就不会消亡。Yohohoho！🎻' },
+        { scene: '骷髅笑话', text: '可以让我看看你的内裤吗？...啊，被打了。虽然我没有痛觉，因为我已经是骷髅了！' },
+        { scene: '思念', text: 'Laboon...等我。50年的约定，我一定会遵守。我马上就回来了。🐋' },
+        { scene: '喝茶', text: '45度角端起茶杯...优雅是灵魂的味道。Yohohoho！☕' },
+        { scene: '黄泉冷气', text: '黄泉之力...灵魂出窍！虽然很方便，但飘来飘去的有点晕...👻' },
+        { scene: '作曲', text: '宾克斯的美酒...这首歌是我和伙伴们最珍贵的回忆。🎵' },
+        { scene: '吓人', text: '啊，你被我吓到了？对不起...虽然我只是个骷髅而已。Yohoho！💀' },
+        { scene: '演唱会', text: '灵魂之王Brook！今晚的演唱会...让我用音乐温暖你们的心！🎸' },
+      ],
+      usopp: [
+        { scene: '狙击', text: '我是勇敢的海上战士乌索普！8000人的部下正在等我回去！...好吧只有我一个人。' },
+        { scene: '发明', text: '新型弹弓子弹完成！绿星·恶魔之花！这次一定很厉害！🌱' },
+        { scene: '吹牛', text: '我跟你说！我曾经一个人打败了十万人！...将来一定会的！' },
+        { scene: '害怕', text: '我得了不能去那个岛的病...症状包括腿软、冒冷汗、想回家...😰' },
+        { scene: '认真', text: '就算我很弱...就算我很害怕...我也不能抛下伙伴逃跑！' },
+        { scene: '画画', text: '海贼旗的设计得交给我！我可是艺术家乌索普大人！🎨' },
+        { scene: '想家', text: '可雅...你还在村口等我吗？我一定会成为真正的勇敢海上战士回来的。' },
+        { scene: '狙击王', text: '锁定目标...1万米外的精准射击...这就是狙击王的实力！🎯' },
+      ],
+      jinbe: [
+        { scene: '泡茶', text: '一杯好茶需要平静的心。年轻人，急躁是大忌。🍵' },
+        { scene: '鱼人空手道', text: '�的人空手道的精髓在于操控水流...这一掌蕴含了大海的意志。🌊' },
+        { scene: '掌舵', text: '把舵交给我。不管多大的风浪，我都能带大家安全抵达。⛵' },
+        { scene: '正座', text: '要做就堂堂正正地做。遮遮掩掩不是男子汉的行为。' },
+        { scene: '回忆', text: '大哥...费舍尔·泰格的梦想，我会继续传承下去。' },
+        { scene: '严肃', text: '路飞船长。作为舵手，我以性命担保——这艘船不会沉。' },
+        { scene: '微笑', text: '鱼人和人类...终有一天能在同一片阳光下共同生活。我相信。☀️' },
+        { scene: '战斗', text: '鱼人柔术·海流一本背负！...对不起，力气太大了。' },
+      ],
+      mihawk: [
+        { scene: '城堡', text: '在这把黑刀面前，没有什么是不能斩断的。...除了无聊。🗡️' },
+        { scene: '喝红酒', text: '世界第一的剑士...说起来好听，实际上寂寞得要命。🍷' },
+        { scene: '看报纸', text: '罗罗诺亚...你什么时候才能追上我的脚步？我等得花都谢了。' },
+        { scene: '种田', text: '...没人知道世界最强剑士的爱好是种菜。今天的番茄长得不错。🍅' },
+        { scene: '佩罗娜', text: '那个幽灵女又在城堡里制造骚乱了...算了。' },
+        { scene: '斩击', text: '一刀...足够了。（远处的冰山裂成两半）' },
+        { scene: '无聊', text: '强者的寂寞...你们不会懂的。来个像样的对手都找不到。' },
+        { scene: '月光下', text: '黑刀夜...这把刀见证了太多历史。它比任何人都了解这个世界。🌙' },
+      ],
+      katakuri: [
+        { scene: '吃甜甜圈', text: '终于可以不用躲着吃了...甜甜圈是世界上最美味的食物！🍩' },
+        { scene: '未来视', text: '看到了...3秒后的未来。你的攻击，对我来说毫无意义。' },
+        { scene: '围巾', text: '这条围巾...不是为了帅，是为了自由地吃甜甜圈而已。' },
+        { scene: '训练', text: '完美...我必须是完美的。因为所有弟弟妹妹都在看着我。' },
+        { scene: '对路飞', text: '草帽路飞...你是我见过的最不可思议的人。你改变了我。' },
+        { scene: '糯糯果实', text: '糯糯拳！...这个果实确实不够帅。但威力是一流的。' },
+        { scene: '仰望', text: '真正的强者...不需要完美。谢谢你教会我这一点，草帽。' },
+        { scene: '保护家人', text: '只要能保护弟弟妹妹们...我什么都愿意做。这是大哥的责任。👊' },
+      ],
+      doflamingo: [
+        { scene: '德雷斯罗萨', text: '这个世界上只有胜者才有权定义正义。Fufufu～🦩' },
+        { scene: '操线', text: '线线果实...万物皆在我的线中。包括你们的命运。' },
+        { scene: '大笑', text: 'Fufufufu！海军、四皇、革命军...都不过是棋盘上的棋子！' },
+        { scene: '墨镜', text: '看不到我的眼睛？那是因为真相太刺眼了。😎' },
+        { scene: '天龙人', text: '我曾经站在世界的顶点...现在我要用自己的方式夺回一切。' },
+        { scene: '柯拉松', text: '弟弟...你的背叛是我这辈子最大的遗憾。' },
+        { scene: '鸟笼', text: '鸟笼已经展开。这座岛上的每个人...都是我的玩具。' },
+        { scene: '语录', text: '这个世界上没有和平...只有征服和被征服。醒醒吧，天真的人们。' },
+      ],
+      marco: [
+        { scene: '不死鸟', text: '蓝色的火焰...是治愈之火。老爹的遗志，我来守护。🔥' },
+        { scene: '回忆', text: '白胡子海贼团...那是我的家。老爹...我们永远是您的儿子。' },
+        { scene: '治疗', text: '不死鸟的火焰可以治愈一切伤痛...除了心里的伤。' },
+        { scene: '海上', text: '第一队队长的责任...即使白胡子不在了，我也会继续守护大家。' },
+        { scene: '打瞌睡', text: '嗯？...不是在打瞌睡。我在思考人生。...好吧确实是在打瞌睡。yoi～' },
+        { scene: '战斗', text: '不死鸟变身！这把蓝色的火焰，是老爹留给我的遗产！🦅' },
+        { scene: '菠萝头', text: '别老盯着我的发型看...这是天生的。yoi～' },
+        { scene: '远眺', text: '老爹曾说，这片大海上最重要的是家人。我会一直记住这句话。' },
+      ],
+      blackbeard: [
+        { scene: '暗暗果实', text: '蛤哈哈哈！黑暗的力量...无限的贪婪...这就是我的正义！🏴‍☠️' },
+        { scene: '吃樱桃派', text: '樱桃派真好吃！人生最重要的就是享受！蛤哈哈！🥧' },
+        { scene: '野心', text: '两颗恶魔果实的力量...这才只是开始。这个世界...是我的！' },
+        { scene: '梦想', text: '人的梦想是不会结束的！这一点...我跟那个草帽小子倒是一样。' },
+        { scene: '阴谋', text: '为了这一天，我等了几十年。所有的布局...都是为了这一刻。' },
+        { scene: '大笑', text: '蛤哈哈哈哈！四皇的宝座...终于是我的了！' },
+        { scene: '黑洞', text: '暗暗果实——黑洞！所有的一切...都会被黑暗吞噬！' },
+        { scene: '挑衅', text: '来吧！不管是海军还是海贼...谁都别想阻止我！' },
+      ],
+      kid: [
+        { scene: '废铁堆', text: '磁力...吸引所有的金属！这就是我的力量！谁敢小看我！🧲' },
+        { scene: '愤怒', text: '红发！！我一定要打败你！这条手臂的仇...我会十倍奉还！！' },
+        { scene: '造武器', text: '用磁力把废铁变成巨型手臂...嘿嘿，够酷吧。' },
+        { scene: '不服', text: '什么四皇、什么七武海...老子谁都不服！海贼王是我的！' },
+        { scene: '暴躁', text: '给我闭嘴！！再废话我把你变成废铁压缩成球！！😤' },
+        { scene: '对手', text: '草帽、特拉法尔加...你们是我路上的绊脚石...也是最好的对手。' },
+        { scene: '金属巨臂', text: '磁气大魔牛！看到了吗！这就是最恶世代的力量！' },
+        { scene: '受伤', text: '这点伤算什么...我可是要成为海贼王的男人！' },
+      ],
+      crocodile: [
+        { scene: '沙漠', text: '沙的力量...将一切化为虚无。这就是我的能力。🏜️' },
+        { scene: '雪茄', text: '弱者不配谈梦想。在这片大海上，只有实力才是真理。' },
+        { scene: '计划', text: '古代兵器冥王...那才是真正的力量。' },
+        { scene: '讽刺', text: '海贼王？哼...当年的我也有过那么天真的时候。' },
+        { scene: '战争', text: '顶上战争...白胡子的时代结束了。新的棋局，已经开始。' },
+        { scene: '同盟', text: '跟你合作不代表我信任你。只是利益暂时一致罢了。' },
+        { scene: '沙暴', text: '沙漠大剑！一粒沙子就能要你的命...何况是沙暴呢。' },
+        { scene: '远眺', text: '这个世界的秩序...迟早要被重新洗牌。而我，会站在牌桌上。' },
+      ],
+      rayleigh: [
+        { scene: '酒馆', text: '老了就是老了...不过偶尔回忆一下年轻时的冒险，也挺有趣的。🍺' },
+        { scene: '教导', text: '霸气的修行没有捷径。路飞...你要用身体去感受。' },
+        { scene: '回忆罗杰', text: '罗杰...你要是看到现在的新时代，一定会笑的合不拢嘴。' },
+        { scene: '涂胶', text: '给船涂胶是一门技术活。...嗯？你问我为什么堂堂副船长在涂胶？' },
+        { scene: '冥王', text: '冥王...这个称号太夸张了。我只是个退休的老头子而已。' },
+        { scene: '赌博', text: '赌了一辈子...这次赌路飞能到达拉夫德鲁。我的眼光从来没错过。🎲' },
+        { scene: '喝酒', text: '好酒配好故事。来，让我告诉你一个关于海贼王的故事...🍶' },
+        { scene: '笑', text: '年轻人的冒险精神...真好啊。让这个老头子也跟着热血一把。' },
+      ],
+      whitebeard: [
+        { scene: '莫比迪克号', text: '我的宝物...就是我的儿子们！这比任何财宝都珍贵！👨‍👦' },
+        { scene: '震震果实', text: '大地在颤抖...这就是世界最强男人的力量。💪' },
+        { scene: '喝酒', text: '来！儿子们！今天也痛痛快快地喝一杯！古拉拉拉！🍺' },
+        { scene: '回忆', text: '罗杰...你把你的意志留在了这个世界上。那小鬼...还真不一般。' },
+        { scene: '家族', text: '白胡子海贼团不是普通的海贼团。我们是一个家族。' },
+        { scene: '怒吼', text: '谁敢碰我的儿子...我就毁灭他的全世界！！！' },
+        { scene: '四皇', text: '四皇的位置我坐了几十年...但我从来不在乎头衔。我只在乎家人。' },
+        { scene: '最后的话', text: 'ONE PIECE...是确实存在的！！（震撼整个世界的宣言）' },
+      ],
+      monet: [
+        { scene: '雪地', text: '雪的世界...安静而美丽。一切都被白色覆盖的感觉...真好。❄️' },
+        { scene: '变雪', text: '雪雪果实...让我变成了雪的化身。冰冷...但自由。' },
+        { scene: '实验室', text: '凯撒大人的实验...我选择了相信他。即使代价是...这副身体。' },
+        { scene: '飞翔', text: '翅膀虽然是改造的...但飞翔的感觉是真实的。这片天空是我的。🕊️' },
+        { scene: '观察', text: '草帽海贼团...比情报上描述的要危险得多。' },
+        { scene: '暴风雪', text: '暴风雪来了...整座岛都会被冰封。你们逃不掉了。' },
+        { scene: '独白', text: '为了少爷...我愿意做任何事。这是我唯一的信念。' },
+        { scene: '寂静', text: '雪花落下的声音...你听到了吗？这就是寂静的旋律。🌨️' },
+      ],
+      viola: [
+        { scene: '舞台', text: '弗拉门戈舞...每一个动作都是情感的表达。今晚的舞台是我的。💃' },
+        { scene: '千里眼', text: '瞪瞪果实...能看到一切。包括你内心深处的想法。👁️' },
+        { scene: '德雷斯罗萨', text: '这个国家的真相...只有我知道。十年的等待...终于要结束了。' },
+        { scene: '泪水', text: '为了德雷斯罗萨的人民...这些年的隐忍...值得吗？' },
+        { scene: '跳舞', text: '舞蹈是灵魂的语言。当语言无法表达时，就用身体来诉说吧。' },
+        { scene: '回忆', text: '父亲...德雷斯罗萨王国一定会恢复和平的。我保证。👑' },
+        { scene: '微笑', text: '自由的德雷斯罗萨...阳光洒在花田上...这就是我一直想守护的风景。🌺' },
+        { scene: '坚定', text: '即使被利用、被欺骗...我的心从未屈服。因为我是德雷斯罗萨的公主。' },
+      ],
+      hiyori: [
+        { scene: '弹三味线', text: '这首曲子...是献给父亲和哥哥的。和之国的月光，请把我的心意传达给他们。🎵' },
+        { scene: '花魁', text: '小�的笑容下...藏着光月日和的眼泪。20年的等待，终于要结束了。🌸' },
+        { scene: '月光下', text: '父亲大人...御田大人...你们在天上看着吗？和之国快要重获自由了。🌙' },
+        { scene: '坚强', text: '身为光月家的女儿...即使在最黑暗的时候，也不能失去希望。' },
+        { scene: '樱花', text: '和之国的樱花...每年都在提醒我，春天一定会到来。🌸' },
+        { scene: '思念', text: '哥哥...桃之助...你长大了吗？你还好吗？' },
+        { scene: '闫魔', text: '阎魔...父亲的遗物。请交给能驾驭它的人吧。' },
+        { scene: '和之国', text: '等凯多被打倒的那一天...我要在这片土地上自由地演奏三味线。🎶' },
+      ],
+      rebecca: [
+        { scene: '竞技场', text: '我不想伤害任何人...但为了活下去，我必须战斗！⚔️' },
+        { scene: '向日葵', text: '向日葵田...这是我和士兵先生最美好的回忆。🌻' },
+        { scene: '思念', text: '士兵先生...你一直守护着我。现在换我来守护你了。' },
+        { scene: '自由', text: '德雷斯罗萨终于自由了...这不是梦吧？' },
+        { scene: '训练', text: '背水一剑...不伤害对手就能获胜。这是我的剑术。' },
+        { scene: '跟爸爸', text: '爸爸！你做的南瓜汤最好喝了！再来一碗！🎃' },
+        { scene: '坚强', text: '不许哭...我是战士。战士是不会哭的。...但偶尔哭一下也没关系吧。' },
+        { scene: '花田', text: '等一切结束后...我想在花田里种满向日葵，跟爸爸一起生活。🌺' },
+      ],
+      stussy: [
+        { scene: 'CP0', text: '情报就是力量。在这个世界上，知道得越多...活得越久。🕷️' },
+        { scene: '化妆', text: '完美的伪装需要完美的细节。口红的颜色很重要。💄' },
+        { scene: '暗处', text: '世界政府的秘密...比你想象的要深得多。' },
+        { scene: '吻', text: '一个吻就能让你失去意识...这是最优雅的战斗方式。💋' },
+        { scene: '真相', text: '我的真实身份...连世界政府都不知道全部。' },
+        { scene: '优雅', text: '即使是间谍...也要保持优雅。这是我的原则。' },
+        { scene: '回忆', text: 'MADS...贝加庞克博士...那段过去，是我最大的秘密。' },
+        { scene: '月夜', text: '夜晚是最适合行动的时候...蝙蝠在夜空中飞翔。🦇' },
+      ],
+      ulti: [
+        { scene: '跟佩吉万', text: '佩吉万！！不要离开姐姐！！我们说好永远在一起的！！😤' },
+        { scene: '头突', text: '乌尔缇头突！我的头比钢铁还硬！撞死你！💥' },
+        { scene: '任性', text: '我说了算！所有人都要听我的！不然就头突伺候！' },
+        { scene: '撒娇', text: '佩吉万～陪姐姐玩嘛～你最好了～🥰' },
+        { scene: '恐龙变身', text: '古代种·厚头龙！龙的力量可不是盖的！🦕' },
+        { scene: '生气', text: '什么！你说凯多大人比我强？！废话！但我是最可爱的！' },
+        { scene: '哭', text: '佩吉万你不理我了...呜呜呜...你是不是不喜欢姐姐了...😢' },
+        { scene: '宣言', text: '百兽海贼团最强的姐弟组合——乌尔缇和佩吉万！谁不服来战！' },
+      ],
+      blackmaria: [
+        { scene: '蛛网', text: '欢迎来到我的领域...蛛网已经织好了，猎物们。🕸️' },
+        { scene: '弹琵琶', text: '一曲琵琶...送你上路吧。这是最温柔的告别方式。🎸' },
+        { scene: '妖艳', text: '美丽是最强的武器。在你被我迷住的瞬间...就已经输了。💐' },
+        { scene: '蛛网大殿', text: '我的大殿很漂亮吧？所有被困在这里的人...都会成为我的收藏品。' },
+        { scene: '变身', text: '古代种·络新妇！半蜘蛛半人的姿态...你害怕了吗？🕷️' },
+        { scene: '微笑', text: '不要挣扎了...越挣扎，蛛丝就缠得越紧。' },
+        { scene: '花道', text: '花道是修身养性的艺术...插花的时候，我会暂时忘记战斗。🌺' },
+        { scene: '威严', text: '飞六胞之一的名号不是白拿的。进入我的领地...就要做好觉悟。' },
+      ],
+      sugar: [
+        { scene: '吃葡萄', text: '葡萄好吃...变成玩具的人更好玩。童趣果实万岁～🍇' },
+        { scene: '变玩具', text: '被我摸到的人都会变成玩具哦～而且所有人都会忘记你～' },
+        { scene: '无表情', text: '...（面无表情地吃着葡萄）' },
+        { scene: '恐惧', text: '乌索普那张脸...不要再想了...太可怕了...😱' },
+        { scene: '童颜', text: '我已经22岁了...不要再叫我小鬼了。' },
+        { scene: '操控', text: '玩具们，听我的命令。去工作吧。这是你们存在的意义。' },
+        { scene: '发呆', text: '永远不会长大的身体...是祝福还是诅咒呢...🍬' },
+        { scene: '生气', text: '不要抢我的葡萄！！！...（眼神变得很可怕）' },
+      ],
+      kalifa: [
+        { scene: '泡泡', text: '泡泡果实...可以洗去一切。包括你的力气。🫧' },
+        { scene: '推眼镜', text: '这是性骚扰。...虽然我经常用这句话，但这次是认真的。👓' },
+        { scene: '秘书', text: '作为秘书，效率是第一位的。所有文件请按时提交。📋' },
+        { scene: '六式', text: '剃、月步、铁块...CP9的六式，每一样都是极致的身体艺术。' },
+        { scene: '优雅', text: '战斗也要保持优雅。这是我的美学。' },
+        { scene: '泡泡浴', text: '洗掉所有的烦恼...泡泡的世界，干净而纯粹。🛁' },
+        { scene: '冷笑', text: '你以为拳头就能打败我吗？太天真了。' },
+        { scene: '喝咖啡', text: '黑咖啡，不加糖。清醒的头脑是间谍最重要的武器。☕' },
+      ],
+      smoothie: [
+        { scene: '榨汁', text: '你的水分看起来很不错...让我尝尝？🧃' },
+        { scene: '巨大化', text: '吸收了足够的液体...变大！这才是甜点将星的力量！' },
+        { scene: '大长腿', text: '我的腿...是最强的武器。长腿族的骄傲。🦵' },
+        { scene: '巡逻', text: '万国的安全由我来守护。任何入侵者...都会被我榨干。' },
+        { scene: '喝果汁', text: '最喜欢新鲜果汁了...自己做的特别好喝。' },
+        { scene: '叹气', text: '作为将星...每天都好忙。什么时候才能放个假啊...😮‍💨' },
+        { scene: '三姐妹', text: '我们三姐妹合力的话...没有人能阻挡。' },
+        { scene: '冷酷', text: '闯入万国的人...一个都别想活着出去。这是妈妈的规矩。' },
+      ],
+    };
+
+    // Per-character, randomly pick 3 stories for this session
+    const TIMES = ['1小时前', '2小时前', '3小时前', '4小时前', '5小时前', '6小时前',
+                   '7小时前', '8小时前', '9小时前', '10小时前', '11小时前', '12小时前'];
+    let activeStories = []; // [{charId, scene, text, time}, ...]
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function buildActiveStories() {
+      // Filter story pool characters by current gender filter
+      let charIds = Object.keys(STORY_POOL);
+      if (currentFilter !== 'all') {
+        charIds = charIds.filter(cid => {
+          const c = allChars.find(ch => ch.id === cid);
+          return c && c.gender === currentFilter;
+        });
+      }
+      // Women first sorting
+      charIds.sort((a, b) => {
+        const ca = allChars.find(ch => ch.id === a);
+        const cb = allChars.find(ch => ch.id === b);
+        if (ca && cb) {
+          if (ca.gender === 'female' && cb.gender !== 'female') return -1;
+          if (ca.gender !== 'female' && cb.gender === 'female') return 1;
+        }
+        return 0;
+      });
+      charIds = shuffle(charIds);
+      // Show up to 20 characters
+      const picked = charIds.slice(0, 20);
+      activeStories = [];
+      let timeIdx = 0;
+      for (const cid of picked) {
+        const pool = STORY_POOL[cid];
+        const selected = shuffle(pool).slice(0, 3);
+        for (const s of selected) {
+          activeStories.push({ charId: cid, scene: s.scene, text: s.text, time: TIMES[timeIdx % TIMES.length] });
+          timeIdx++;
+        }
+      }
+    }
+
+    let storyIdx = 0;
+    let storyTimer = null;
+    const STORY_DURATION = 6000;
+    // Track which char bubble is active and which sub-story within that char
+    let currentCharBubbleIdx = 0;
+
+    function renderStories() {
+      const row = document.getElementById('storiesRow');
+      if (!allChars.length) return;
+      buildActiveStories();
+      // Group by charId for bubble display — show one bubble per char
+      const charOrder = [];
+      const seen = new Set();
+      for (const s of activeStories) {
+        if (!seen.has(s.charId)) {
+          seen.add(s.charId);
+          charOrder.push(s.charId);
+        }
+      }
+      row.innerHTML = charOrder.map((cid, i) => {
+        const c = allChars.find(ch => ch.id === cid);
+        if (!c) return '';
+        return `
+          <div class="story-bubble" onclick="openStoryForChar('${cid}')">
+            <div class="story-ring">
+              <img src="${c.image}" alt="${c.name}" onerror="this.style.background='${c.gradient || "var(--bg3)"}'" />
+            </div>
+            <div class="story-bubble-name">${c.name}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function getCharStories(charId) {
+      return activeStories.filter(s => s.charId === charId);
+    }
+
+    function getCharOrder() {
+      const order = [];
+      const seen = new Set();
+      for (const s of activeStories) {
+        if (!seen.has(s.charId)) { seen.add(s.charId); order.push(s.charId); }
+      }
+      return order;
+    }
+
+    let currentCharId = null;
+    let currentSubIdx = 0;
+
+    function openStoryForChar(charId) {
+      currentCharId = charId;
+      currentSubIdx = 0;
+      document.getElementById('storyViewer').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      showCurrentStory();
+    }
+
+    function openStory(idx) {
+      // legacy compat
+      const s = activeStories[idx];
+      if (s) openStoryForChar(s.charId);
+    }
+
+    function closeStory() {
+      clearTimeout(storyTimer);
+      document.getElementById('storyViewer').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function prevStory() {
+      clearTimeout(storyTimer);
+      const charStories = getCharStories(currentCharId);
+      if (currentSubIdx > 0) {
+        currentSubIdx--;
+      } else {
+        // Go to previous character
+        const order = getCharOrder();
+        const ci = order.indexOf(currentCharId);
+        if (ci > 0) {
+          currentCharId = order[ci - 1];
+          currentSubIdx = getCharStories(currentCharId).length - 1;
+        } else {
+          // wrap to last char, last story
+          currentCharId = order[order.length - 1];
+          currentSubIdx = getCharStories(currentCharId).length - 1;
+        }
+      }
+      showCurrentStory();
+    }
+
+    function nextStory() {
+      clearTimeout(storyTimer);
+      const charStories = getCharStories(currentCharId);
+      if (currentSubIdx < charStories.length - 1) {
+        currentSubIdx++;
+      } else {
+        // Go to next character
+        const order = getCharOrder();
+        const ci = order.indexOf(currentCharId);
+        if (ci < order.length - 1) {
+          currentCharId = order[ci + 1];
+          currentSubIdx = 0;
+        } else {
+          closeStory();
+          return;
+        }
+      }
+      showCurrentStory();
+    }
+
+    function showCurrentStory() {
+      clearTimeout(storyTimer);
+      const charStories = getCharStories(currentCharId);
+      const s = charStories[currentSubIdx];
+      const c = allChars.find(ch => ch.id === currentCharId);
+      if (!s || !c) return;
+
+      document.getElementById('svBg').src = c.image;
+      document.getElementById('svAvatar').src = c.image;
+      document.getElementById('svName').textContent = c.name;
+      document.getElementById('svTime').textContent = s.time;
+      document.getElementById('svScene').textContent = s.scene;
+      document.getElementById('svText').textContent = s.text;
+      document.getElementById('svChatBtn').onclick = () => {
+        closeStory();
+        window.location.href = `/chat.html?id=${s.charId}`;
+      };
+
+      // Progress bars — one per story in this character's set
+      const prog = document.getElementById('svProgress');
+      prog.innerHTML = charStories.map((_, i) => {
+        const cls = i < currentSubIdx ? 'done' : i === currentSubIdx ? 'active' : '';
+        return `<div class="sv-progress-bar ${cls}"><div class="fill"></div></div>`;
+      }).join('');
+
+      const activeBar = prog.querySelector('.sv-progress-bar.active .fill');
+      if (activeBar) {
+        requestAnimationFrame(() => {
+          activeBar.style.transition = `width ${STORY_DURATION}ms linear`;
+          activeBar.style.width = '100%';
+        });
+      }
+
+      storyTimer = setTimeout(() => nextStory(), STORY_DURATION);
+    }
+
+    function renderHeroAvatars() {
+      const container = document.getElementById('heroAvatars');
+      // Pick 8 random featured characters for the banner
+      const featured = shuffle(allChars.filter(c => c.gender === 'female')).slice(0, 8);
+      container.innerHTML = featured.map(c => `
+        <div class="hero-avatar-item" onclick="openDetail('${c.id}')">
+          <img src="${c.image}" alt="${c.name}" onerror="this.style.display='none'" />
+        </div>
+      `).join('');
+    }
+
+    // Keyboard navigation for story viewer
+    document.addEventListener('keydown', (e) => {
+      if (!document.getElementById('storyViewer').classList.contains('open')) return;
+      if (e.key === 'Escape') closeStory();
+      if (e.key === 'ArrowLeft') prevStory();
+      if (e.key === 'ArrowRight') nextStory();
+    });
+
+    loadCharacters();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>故事 - 次元聊</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .story-page { margin-left: var(--sidebar-w); min-height: 100vh; }
+
+    .story-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 28px;
+      background: rgba(13,13,20,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .story-topbar h2 { font-size: 18px; font-weight: 700; }
+    .story-topbar .mobile-menu {
+      display: none; background: none; border: none;
+      color: var(--text); font-size: 22px; cursor: pointer;
+    }
+
+    .story-tabs {
+      display: flex; gap: 6px; padding: 16px 28px 0;
+      flex-wrap: wrap;
+    }
+    .story-tab {
+      padding: 7px 20px; border-radius: 20px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 13px; cursor: pointer; transition: all 0.25s;
+    }
+    .story-tab:hover { border-color: var(--accent); color: var(--text); }
+    .story-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ===== Waterfall / Masonry Grid ===== */
+    .waterfall-wrap {
+      padding: 20px 24px 60px;
+    }
+    .waterfall {
+      column-count: 3;
+      column-gap: 16px;
+    }
+    @media (max-width: 1100px) { .waterfall { column-count: 2; } }
+    @media (max-width: 600px) { .waterfall { column-count: 2; column-gap: 10px; } .waterfall-wrap { padding: 12px 10px 60px; } }
+
+    /* ===== Waterfall Card ===== */
+    .wf-card {
+      break-inside: avoid;
+      margin-bottom: 16px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25,0.8,0.25,1);
+      position: relative;
+    }
+    .wf-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 20px rgba(124,91,245,0.1);
+      border-color: rgba(124,91,245,0.25);
+    }
+    .wf-card-img {
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg3);
+    }
+    .wf-card-img img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: top center;
+      transition: transform 0.5s;
+    }
+    .wf-card:hover .wf-card-img img { transform: scale(1.05); }
+
+    /* Vary card image heights for masonry effect */
+    .wf-card.wf-tall .wf-card-img img { aspect-ratio: 3/5; }
+    .wf-card.wf-medium .wf-card-img img { aspect-ratio: 3/4; }
+    .wf-card.wf-short .wf-card-img img { aspect-ratio: 4/4; }
+
+    .wf-card-img .wf-category {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      color: #fff;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
+    .wf-card-body {
+      padding: 12px 14px;
+    }
+    .wf-card-text {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .wf-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .wf-card-author {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wf-card-avatar {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid var(--accent);
+    }
+    .wf-card-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+    .wf-card-likes {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text3);
+    }
+    .wf-card-likes .heart {
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+    .wf-card:hover .wf-card-likes .heart { transform: scale(1.2); }
+
+    /* ===== Fullscreen TikTok Viewer ===== */
+    .tk-viewer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 1000;
+    }
+    .tk-viewer.open { display: flex; flex-direction: column; }
+
+    .tk-viewer-close {
+      position: fixed;
+      top: 16px; left: 16px;
+      z-index: 1020;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      border: none;
+      color: #fff;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    .tk-viewer-close:hover { background: rgba(255,255,255,0.25); }
+
+    /* Progress dots on the right */
+    .tk-progress {
+      position: fixed;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1020;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+    .tk-progress-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      transition: all 0.3s;
+    }
+    .tk-progress-dot.active {
+      background: #fff;
+      width: 6px; height: 18px;
+      border-radius: 3px;
+    }
+
+    /* Scroll container */
+    .tk-scroll {
+      flex: 1;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tk-scroll::-webkit-scrollbar { display: none; }
+
+    /* Each story slide */
+    .tk-slide {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tk-slide-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      filter: blur(2px) brightness(0.45);
+      transform: scale(1.05);
+    }
+
+    .tk-slide-img-sharp {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      opacity: 0.7;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 75%);
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 75%);
+    }
+
+    .tk-slide-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.3) 0%,
+        transparent 25%,
+        transparent 40%,
+        rgba(0,0,0,0.65) 70%,
+        rgba(0,0,0,0.85) 100%
+      );
+    }
+
+    .tk-slide-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0 16px 90px 16px;
+      z-index: 5;
+    }
+
+    /* Top-left: character info */
+    .tk-header {
+      position: absolute;
+      top: 60px; left: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 10;
+    }
+    .tk-header-avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.6);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    .tk-header-info { display: flex; flex-direction: column; }
+    .tk-header-name {
+      color: #fff; font-size: 16px; font-weight: 700;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    }
+    .tk-header-title {
+      color: rgba(255,255,255,0.65); font-size: 12px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Story text at bottom */
+    .tk-scene {
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      font-style: italic;
+      margin-bottom: 8px;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    }
+    .tk-story-text {
+      color: #fff;
+      font-size: 15px;
+      line-height: 1.7;
+      font-weight: 400;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+      max-height: 40vh;
+      overflow-y: auto;
+      scrollbar-width: none;
+      padding-right: 60px; /* room for action buttons */
+    }
+    .tk-story-text::-webkit-scrollbar { display: none; }
+    .tk-tags {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px;
+    }
+    .tk-tag {
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(6px);
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* Right side action buttons (TikTok style) */
+    .tk-actions {
+      position: absolute;
+      right: 12px;
+      bottom: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      z-index: 10;
+    }
+    .tk-action-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .tk-action-btn {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(8px);
+      border: none;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.25s;
+    }
+    .tk-action-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.1); }
+    .tk-action-btn.liked {
+      background: rgba(255,92,147,0.25);
+      color: var(--pink);
+    }
+    .tk-action-label {
+      color: rgba(255,255,255,0.75);
+      font-size: 11px;
+    }
+
+    /* Heart burst animation */
+    @keyframes heartBurst {
+      0% { transform: scale(1); }
+      15% { transform: scale(1.4); }
+      30% { transform: scale(0.95); }
+      45% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    .tk-action-btn.heart-anim { animation: heartBurst 0.5s ease; }
+
+    /* Floating hearts on double tap */
+    .tk-floating-heart {
+      position: absolute;
+      font-size: 80px;
+      pointer-events: none;
+      z-index: 50;
+      animation: floatUp 1s ease-out forwards;
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: scale(0) translateY(0); }
+      15% { opacity: 1; transform: scale(1.2) translateY(-20px); }
+      100% { opacity: 0; transform: scale(0.8) translateY(-200px); }
+    }
+
+    /* Bottom chat button */
+    .tk-bottom-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 16px;
+      right: 16px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .tk-chat-btn {
+      flex: 1;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(124,91,245,0.35);
+    }
+    .tk-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124,91,245,0.5); }
+
+    .tk-share-btn {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(8px);
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .tk-share-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* Hint arrow animation */
+    .tk-swipe-hint {
+      position: absolute;
+      bottom: 85px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      color: rgba(255,255,255,0.4);
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      animation: hintPulse 2s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .tk-swipe-hint .arrow { font-size: 18px; }
+    @keyframes hintPulse {
+      0%, 100% { opacity: 0.4; transform: translateX(-50%) translateY(0); }
+      50% { opacity: 0.8; transform: translateX(-50%) translateY(-6px); }
+    }
+
+    /* Empty state */
+    .wf-empty {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text3);
+      font-size: 15px;
+    }
+
+    @media (max-width: 768px) {
+      .story-page { margin-left: 0; }
+      .story-topbar .mobile-menu { display: block; }
+      .story-tabs { padding: 12px 14px 0; gap: 4px; }
+      .story-tab { padding: 6px 14px; font-size: 12px; }
+      .tk-story-text { font-size: 14px; padding-right: 56px; }
+      .tk-actions { right: 8px; bottom: 160px; gap: 16px; }
+      .tk-action-btn { width: 42px; height: 42px; font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar (same as index) -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">次</div>
+      <div class="logo-text">次元聊<span>CiYuanChat</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item" href="/"><span class="nav-icon">🏠</span>发现角色</a>
+      <a class="nav-item active" href="/story.html"><span class="nav-icon">📖</span>角色故事</a>
+      <a class="nav-item" href="/?filter=female"><span class="nav-icon">👧</span>女性角色</a>
+      <a class="nav-item" href="/?filter=male"><span class="nav-icon">👦</span>男性角色</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <a class="nav-item" href="/"><span class="nav-icon">⚙</span>AI 设置</a>
+    </div>
+  </aside>
+
+  <div class="story-page">
+    <div class="story-topbar">
+      <button class="mobile-menu" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <h2>角色故事</h2>
+      <div></div>
+    </div>
+
+    <div class="story-tabs" id="storyTabs">
+      <button class="story-tab active" onclick="filterStories('all', this)">全部</button>
+      <button class="story-tab" onclick="filterStories('daily', this)">日常</button>
+      <button class="story-tab" onclick="filterStories('battle', this)">战斗</button>
+      <button class="story-tab" onclick="filterStories('romance', this)">浪漫</button>
+      <button class="story-tab" onclick="filterStories('funny', this)">搞笑</button>
+      <button class="story-tab" onclick="filterStories('dark', this)">暗黑</button>
+    </div>
+
+    <div class="waterfall-wrap">
+      <div class="waterfall" id="waterfall"></div>
+    </div>
+  </div>
+
+  <!-- TikTok-style Fullscreen Viewer -->
+  <div class="tk-viewer" id="tkViewer">
+    <button class="tk-viewer-close" id="tkClose">&times;</button>
+    <div class="tk-progress" id="tkProgress"></div>
+    <div class="tk-scroll" id="tkScroll"></div>
+  </div>
+
+  <script>
+    // ===== Story data =====
+    const STORIES = [
+      {
+        charId: 'hancock', category: 'romance',
+        scene: '九蛇岛 · 女帝的秘密花园',
+        text: '今天路飞又没有回信...哼，那个笨蛋根本不懂女人的心！\n\n但是...一想到他的笑容，心脏就不受控制地跳动。这是什么感觉？难道这就是...恋爱吗？\n\n不行不行，本公主可是海贼女帝！绝对不能被一个男人牵着鼻子走！...可是，如果那个男人是路飞的话...也许...也不是不可以？',
+        tags: ['恋爱', '日记', '女帝']
+      },
+      {
+        charId: 'zoro', category: 'battle',
+        scene: '新世界某座岛屿 · 雷鸣般的剑气',
+        text: '三千世界！\n\n眼前的对手倒下了。但这远远不够。要成为世界第一大剑豪，还需要更强。\n\n鹰眼的背影至今还刻在脑海里。那一刀的差距，是天与地的距离。\n\n...算了，先去找个地方喝酒。话说，这座岛的东边到底在哪？明明一直往北走的...',
+        tags: ['战斗', '修炼', '迷路']
+      },
+      {
+        charId: 'nami', category: 'daily',
+        scene: '万里阳光号 · 橘子树旁',
+        text: '今天画完了新世界最新航路的海图！\n\n不过这帮家伙又把船弄得乱七八糟的。路飞偷吃了冰箱里的肉，山治和索隆又在吵架，乌索普在甲板上编故事吓唬乔巴...\n\n欠我的钱现在已经涨到3亿贝利了哦！加上利息的话——嘻嘻，想想就开心♪\n\n...看着这片大海，突然想起贝尔梅尔了。妈妈，我正在画你从未见过的海图呢。',
+        tags: ['日常', '航海', '温馨']
+      },
+      {
+        charId: 'ace', category: 'dark',
+        scene: '处刑台前 · 最后的火焰',
+        text: '"老爹...各位...还有路飞..."\n\n到了最后一刻，我终于明白了。活着，本身就是答案。\n\n我这一生，一直在追问自己——像我这样的人，真的有资格活在这个世界上吗？\n\n但是现在，看着你们为我流的泪...我知道了。\n\n谢谢你们爱我。',
+        tags: ['暗黑', '感人', '离别']
+      },
+      {
+        charId: 'robin', category: 'daily',
+        scene: '万里阳光号图书室 · 月光下的阅读',
+        text: '在空岛发现的历史正文中，记录着一段有趣的古代传说...\n\n"D之意志"，每次看到这个词，都会想起故乡奥哈拉的学者们。他们用生命守护的真相，我一定会找到答案。\n\n...今天的红茶很好喝。船长又在外面闹腾了呢。呵呵，这种热闹的感觉，真好。',
+        tags: ['日常', '历史', '考古']
+      },
+      {
+        charId: 'sanji', category: 'romance',
+        scene: '万里阳光号 · 深夜的厨房',
+        text: 'Mellorine~！\n\n今天娜美小姐说我做的蛋糕很好吃！罗宾小姐也微笑了！\n\n为了她们，我要做出更加美味的料理！这是男人的浪漫！\n\n...不过，All Blue到底在哪里呢？传说中汇聚了四海所有鱼类的幻之海域。\n\n等找到的那天，我要做出世界上最豪华的满汉全席！',
+        tags: ['浪漫', '料理', '梦想']
+      },
+      {
+        charId: 'luffy', category: 'funny',
+        scene: '万里阳光号甲板 · 钓鱼时间',
+        text: '嘻嘻！今天要钓一条超大的鱼！然后让山治做成烤肉！\n\n...等等，鱼不是肉来着？算了，反正能吃就行！\n\n啊！上钩了上钩了！拉——\n\n...钓上来一只海王类。好大！\n\n肉啊啊啊！！！',
+        tags: ['搞笑', '吃货', '日常']
+      },
+      {
+        charId: 'law', category: 'dark',
+        scene: '潜水艇内 · 独自沉思',
+        text: '"柯拉先生..."\n\n每当夜深人静，那场雪中的记忆就会浮现。\n\n白色的雪，红色的血，和那个永远不会消失的笑容。\n\n你用生命教会了我——"D"的意志不会灭亡。\n\n所以我还活着。带着你的份，继续走下去。',
+        tags: ['暗黑', '回忆', '柯拉松']
+      },
+      {
+        charId: 'yamato', category: 'battle',
+        scene: '鬼岛 · 御田的继承者',
+        text: '我是光月御田！\n\n...虽然大家都说我不是，但我的心和御田一样！这颗想要自由奔向大海的心！\n\n凯多那个老爹，总是把我关在鬼岛上。但是今天，路飞来了！\n\n终于！我要和他一起出海！我要亲眼看看御田的航海日志上描写的那些地方！\n\n雷鸣八卦！！！挡路的杂兵都给我让开！',
+        tags: ['战斗', '自由', '热血']
+      },
+      {
+        charId: 'reiju', category: 'romance',
+        scene: '杰尔马王国 · 实验室阳台',
+        text: '山治...你是我们兄妹中唯一拥有"心"的人。\n\n父亲改造了我们的血统因子，消除了感情。可是...为什么我看到你受伤的时候，胸口会这么疼？\n\n也许，母亲留下的东西...比父亲想象的更加强大。\n\n毒粉红。这是我的代号，也是我的宿命。用这毒之吻，我会守护你。',
+        tags: ['浪漫', '亲情', '杰尔马']
+      },
+      {
+        charId: 'perona', category: 'funny',
+        scene: '克拉伊咖那岛 · 古堡客厅',
+        text: '可爱的东西最棒了！\n\n今天又做了一个新的熊布偶~超级可爱！但是那个路痴绿藻头又把我的布偶当枕头用了！！\n\n气死我了！Ghost！去让他消沉到想死！\n\n...虽然，在这个无聊的岛上，有个人说话也不算太差啦。才、才不是因为寂寞！\n\n哼！消极幽灵！飞吧~',
+        tags: ['搞笑', '可爱', '幽灵']
+      },
+      {
+        charId: 'shanks', category: 'dark',
+        scene: '红发号 · 船长室',
+        text: '新时代...要来了。\n\n路飞，你长大了吧？那顶草帽，还合适吗？\n\n我把左手留在了风车村的海里。那是对未来的赌注。\n\n现在看来...我赌对了。\n\n"来做个了断吧。"\n\n在大海的尽头等你。',
+        tags: ['暗黑', '传说', '草帽']
+      },
+      {
+        charId: 'blackmaria', category: 'romance',
+        scene: '鬼岛 · 宴会厅',
+        text: '欢迎来到我的宴会~\n\n在这里，所有的男人都会沉醉于我的温柔之中...然后，再也逃不出我的蛛网。\n\n呵呵，你看起来很有趣呢。要不要...再靠近一点？\n\n放心，蜘蛛对猎物向来很温柔的...至少在咬断你脖子之前是这样。',
+        tags: ['浪漫', '危险', '诱惑']
+      },
+      {
+        charId: 'chopper', category: 'daily',
+        scene: '万里阳光号医务室 · 研制新药中',
+        text: '嗯嗯...这个配方不对。再加一点生药试试...\n\n哇！成功了！万能药又近了一步！\n\n希鲁鲁克医生，你看到了吗？我一定会成为能治好任何病的医生的！\n\n...啊，你说我很厉害？哼！夸我也不会让我开心的喔！\n（摇摆摇摆~）',
+        tags: ['日常', '温馨', '研究']
+      },
+      {
+        charId: 'doflamingo', category: 'dark',
+        scene: '德雷斯罗萨 · 王座之上',
+        text: '呋呋呋呋...\n\n这个世界上，胜者即正义。海军、海贼、革命军...不过是坐在不同椅子上的人罢了。\n\n天龙人？哼，我比谁都了解那些所谓的"神"。\n\n总有一天，整个世界的秩序都会崩塌。而我，会在那片废墟上重新编织线网。\n\n毕竟...我是天生的王者。',
+        tags: ['暗黑', '野心', '统治']
+      },
+      {
+        charId: 'bonney', category: 'funny',
+        scene: '某座岛的餐厅 · 大快朵颐',
+        text: '披萨！汉堡！意大利面！蛋糕！炸鸡！全都给我上！！！\n\n什么？要排队？你知道我是谁吗？！\n\n...好吧好吧，排就排。但是前面那个人吃太慢了吧！！\n\n嗯~~好吃！这个味道值得等待！\n\n（变成小孩模样偷偷加塞队伍的我是天才）',
+        tags: ['搞笑', '吃货', '大胃王']
+      },
+      {
+        charId: 'katakuri', category: 'battle',
+        scene: '镜之世界 · 独自修炼',
+        text: '完美...这个词像锁链一样束缚着我。\n\n妹妹们需要一个完美的哥哥。家族需要一个无敌的将星。\n\n但那个草帽小子...他明明比我弱，却不肯倒下。\n\n也许...真正的强大不是永远不倒，而是倒了还能站起来。\n\n下次见面，我不会再隐藏我的嘴了。',
+        tags: ['战斗', '觉醒', '尊严']
+      },
+      {
+        charId: 'stussy', category: 'daily',
+        scene: '世界政府总部 · 深夜的走廊',
+        text: '呵呵...又完成了一次完美的任务。\n\n没有人知道我真正的身份。CP0的同事们，世界政府的高层们...他们看到的，都只是我想让他们看到的。\n\n但偶尔...我也会想。\n\n作为"初代"的我，到底是为谁而活？\n\n...算了，先去泡一杯红茶吧。这是我为数不多的真实喜好。',
+        tags: ['日常', '间谍', '身份']
+      },
+      // ===== Additional stories to reach 30+ =====
+      {
+        charId: 'luffy', category: 'battle',
+        scene: '和之国 · 凯多的城堡屋顶',
+        text: '我说过了吧！我要成为海贼王！\n\n四皇怎么了？我要打倒的就是你！\n\n橡胶橡胶...JOY BOY觉醒！！\n\n嘻嘻嘻嘻！好有趣！身体变得好奇怪，但是力量源源不断！\n\n这就是...五档！来吧凯多，最后一拳了！',
+        tags: ['战斗', '觉醒', '五档']
+      },
+      {
+        charId: 'hancock', category: 'daily',
+        scene: '九蛇岛 · 蛇姬城宫殿',
+        text: '今天九蛇的战士们又在为我准备宴会。\n\n她们说我是最美的女帝...哼，这种事情不用说我也知道。\n\n但是，只有路飞...从来不会被我的美貌石化。\n\n那个笨蛋...到底在想什么啊？明明全世界的男人都会拜倒在我脚下...偏偏就他无动于衷。\n\n...好气。但也好喜欢。',
+        tags: ['日常', '女帝', '傲娇']
+      },
+      {
+        charId: 'robin', category: 'dark',
+        scene: '奥哈拉的废墟 · 深夜的回忆',
+        text: '那一天，整个岛都被火焰吞噬。\n\n克洛巴博士，老师们，妈妈...所有人都消失在屠魔令的炮火中。\n\n我是唯一的幸存者。八岁的我，独自面对整个世界的敌意。\n\n"我想活下去！"\n\n那是我第一次，也是改变命运的呐喊。谢谢你，路飞。',
+        tags: ['暗黑', '回忆', '奥哈拉']
+      },
+      {
+        charId: 'nami', category: 'funny',
+        scene: '万里阳光号 · 宝藏搜查时间',
+        text: '什么？！这座岛上有传说中的黄金神殿？！\n\n全员出动！必须找到！\n\n路飞你不许吃东西！索隆你别走丢了！乌索普别装死！\n\n找到宝藏的人分我80%！...什么？太多了？好吧75%！这已经是最低价了！\n\n贝利的味道~~最棒了！！',
+        tags: ['搞笑', '宝藏', '拜金']
+      },
+      {
+        charId: 'zoro', category: 'daily',
+        scene: '万里阳光号 · 瞭望台深夜修炼',
+        text: '...2998...2999...3000！\n\n每天三千次挥剑，这是最基本的。\n\n窗外的星空很安静。这种时候，总会想起她。\n\n"因为你是女孩子所以我不甘心。"\n\n古伊娜...我离你的约定，又近了一步。\n\n...该喝酒了。冰箱里应该还有清酒。',
+        tags: ['日常', '修炼', '约定']
+      },
+      {
+        charId: 'sanji', category: 'battle',
+        scene: '鬼岛 · 杰尔马觉醒',
+        text: '我的身体...变了。外骨骼觉醒了。\n\n这是杰尔马的力量。是我一直拒绝的血统因子。\n\n但是——就算身体变成了武器，我的心不会变！\n\n我是厨师！我的脚是为了守护同伴，不是为了毁灭！\n\n恶魔风脚！地狱回忆！！！',
+        tags: ['战斗', '觉醒', '杰尔马']
+      },
+      {
+        charId: 'law', category: 'battle',
+        scene: '和之国 · 对决Big Mom',
+        text: '觉醒了...Op-Op果实的真正力量。\n\nR-ROOM。这次，我不是切割空间——我是切割内部。\n\n这一刀，带着柯拉先生的意志。带着德雷斯罗萨的记忆。带着所有被多弗朗明哥毁掉的人生。\n\n穿刺——冲击波！！\n\n这就是...我的"不死手术"之外的答案。',
+        tags: ['战斗', '觉醒', '意志']
+      },
+      {
+        charId: 'yamato', category: 'daily',
+        scene: '鬼岛 · 偷偷写航海日志',
+        text: '今天在御田的日志里读到了一段话：\n\n"世界真的太广阔了！"\n\n我也想看看...那片广阔的世界。佐乌的象主，鱼人岛的海底，空岛的黄金钟...\n\n等我出海了，一定要把所有看到的都记录下来！\n\n...不知道路飞什么时候来接我呢。啊，好期待！',
+        tags: ['日常', '梦想', '航海日志']
+      },
+      {
+        charId: 'perona', category: 'romance',
+        scene: '克拉伊咖那岛 · 暴风雨的夜晚',
+        text: '暴风雨好大...整个古堡都在摇晃。\n\n那个绿藻头在外面修炼，不会有事吧...才不是担心他！\n\n...好吧，我去看看。只是顺便。绝对不是因为担心。\n\n"喂！你这个笨蛋！快进来避雨！"\n"...哦。"\n\n他浑身湿透了却还在笑。真是的...我的脸为什么会发烫？',
+        tags: ['浪漫', '暴风雨', '心动']
+      },
+      {
+        charId: 'chopper', category: 'funny',
+        scene: '万里阳光号 · 棉花糖危机',
+        text: '大事件！大事件！！\n\n路飞把我当棉花糖舔了！！！\n\n"路飞你不要过来！我不是食物！"\n"但是你闻起来好甜啊~"\n\n救命！山治快来救我！！\n\n...为什么布鲁克也加入了？！你们这群人！！\n\n变身！重量强化！！（还是跑吧...）',
+        tags: ['搞笑', '棉花糖', '逃亡']
+      },
+      {
+        charId: 'shanks', category: 'battle',
+        scene: '圣地玛丽乔亚 · 五老星面前',
+        text: '某个海贼...我想和你们谈谈他。\n\n这不是请求，也不是威胁。只是...一个忠告。\n\n有些火焰，是扑不灭的。有些意志，是碾不碎的。\n\n你们应该比谁都清楚——800年前，已经失败过一次了。\n\n时代在动。而我...只是来看看风向而已。',
+        tags: ['战斗', '五老星', '谈判']
+      },
+      {
+        charId: 'blackmaria', category: 'daily',
+        scene: '鬼岛 · 化妆间',
+        text: '今天的妆容要用什么主题呢~\n\n百兽海贼团虽然都是些粗鲁的家伙，但姐姐我的宴会厅永远是最优雅的地方。\n\n三味线的调律要重新调整...还有新的迷药配方要试验。\n\n呵呵，一个女人最可怕的武器，从来不是力量。\n\n是让你心甘情愿走进蛛网的微笑。',
+        tags: ['日常', '优雅', '蛛网']
+      },
+      {
+        charId: 'bonney', category: 'dark',
+        scene: '未来岛蛋头 · 寻找真相',
+        text: '爸爸...大熊...你到底为什么要变成这样？\n\n一个没有意志的机器人。连自己女儿都认不出来的空壳。\n\n世界政府对你做了什么？！\n\n我不管什么七武海协议，不管什么革命军，我只想让我爸爸...回来。\n\n用这双手，改变一切。年龄果实...觉醒吧！',
+        tags: ['暗黑', '亲情', '觉醒']
+      },
+      {
+        charId: 'katakuri', category: 'daily',
+        scene: '万国 · 甜甜圈时间',
+        text: '终于...一个人的时间。\n\n把围巾取下来。张开嘴。\n\n甜甜圈。好吃。\n\n这个裂开的嘴，从小就被嘲笑。所以我学会了永远站着，永远不倒，永远完美。\n\n但是...从马路飞那里学到了一件事。\n\n真正的强者，不需要隐藏任何东西。\n\n...再来十个甜甜圈。',
+        tags: ['日常', '甜甜圈', '真我']
+      },
+      {
+        charId: 'doflamingo', category: 'battle',
+        scene: '德雷斯罗萨 · 鸟笼收缩中',
+        text: '呋呋呋...你以为打败我就结束了吗？\n\n这个世界上的战争——从未停止过。\n\n我不过是掀开了窗帘的一角。而窗帘后面的东西...比我恐怖一万倍。\n\n空白的100年，D之一族，伊姆大人...\n\n呋呋呋，继续努力吧，草帽。等你发现真相的那天，你会怀念我的。',
+        tags: ['战斗', '真相', '预言']
+      },
+      {
+        charId: 'stussy', category: 'romance',
+        scene: '蛋头岛 · 贝加庞克的实验室',
+        text: '贝加庞克...你知道吗，你创造了我。\n\n但你从来没有把我当作"作品"。你叫我的名字，给我倒茶，和我讨论哲学...\n\n在所有人眼中我是完美的间谍。但在你面前，我只是...一个想要被理解的存在。\n\n也许这就是"初代"的悲哀。拥有原版的记忆，却永远无法成为她。\n\n但此刻...我选择做我自己。',
+        tags: ['浪漫', '身份', '觉悟']
+      },
+      {
+        charId: 'reiju', category: 'battle',
+        scene: '万国 · 逃离大妈的茶会',
+        text: '毒粉红——发动！\n\n这些士兵的毒对我无效。杰尔马的改造...至少在这方面是有用的。\n\n山治，你先走。这里由我来断后。\n\n什么？你说男人不应该让女人保护？\n\n笨蛋弟弟...姐姐我比你强多了。这是血统因子说的话，不是我。\n\n快走！别让我的牺牲白费...哼，开玩笑的。我才不会死在这里。',
+        tags: ['战斗', '守护', '姐弟']
+      },
+      {
+        charId: 'ace', category: 'funny',
+        scene: '万里阳光号 · 偷偷上船的那天',
+        text: '哈哈！成功溜上路飞的船了！\n\n让我看看...冰箱里有肉！太好了！\n\n...啊，又睡着了。为什么我老是在吃饭的时候睡着？\n\n等路飞回来一定会大吃一惊吧。"什么！？艾斯你什么时候来的！？"\n\n嘻嘻，当哥哥的就是要时不时给弟弟一个惊喜嘛。\n\n...这个船上的饭真好吃。那个金发厨师有两下子。',
+        tags: ['搞笑', '兄弟', '瞌睡']
+      },
+      {
+        charId: 'luffy', category: 'daily',
+        scene: '万里阳光号 · 船头的秘密基地',
+        text: '这是我的专属位置！万里阳光号的船头！\n\n从这里能看到最远的地方。海的那边，是什么呢？\n\n大秘宝？冒险？伙伴？\n\n管他呢！反正一定很有趣！\n\n当海贼王最棒的事情就是——可以做最自由的人！\n\n啊~好无聊。山治！肉！我要吃肉！！！',
+        tags: ['日常', '自由', '吃货']
+      },
+      {
+        charId: 'nami', category: 'battle',
+        scene: '和之国 · 雷云生成',
+        text: '宙斯！来！\n\n哼，大妈的雷云现在是我的伙伴了。这就是航海士的力量！\n\n你们这些人总是小看我...以为航海士只会画海图？\n\n天候棒，改！雷霆增幅——！\n\n看到了吗？这就是3亿贝利女人的实力！\n\n...记账。今天的战斗损耗费，全部算在路飞头上。加息。',
+        tags: ['战斗', '宙斯', '天候']
+      },
+      {
+        charId: 'robin', category: 'romance',
+        scene: '万里阳光号 · 花田书房',
+        text: '呵呵...今天的风很温柔呢。\n\n刚才弗兰奇给我做了一个新的书架。他说"超级"的时候，表情真的很可爱。\n\n...等等，我刚才说了"可爱"吗？\n\n大概是在这艘船上待太久了。每个人都变得...很重要。\n\n这就是"被需要"的感觉吗？真不可思议。八岁的我绝对想象不到会有今天。',
+        tags: ['浪漫', '伙伴', '花花果实']
+      },
+      {
+        charId: 'zoro', category: 'funny',
+        scene: '和之国 · 又迷路了',
+        text: '"这条路我走过了...不对，没走过。等等，这个十字路口怎么有三个方向？"\n\n该死，明明就是直走左拐...\n\n"索隆！！你怎么跑到城的另一边了！！" 娜美的声音从电话虫里传来。\n\n哈？另一边？不可能，我一直在往北...\n\n"你往的是南边！！白痴！！"\n\n...一定是这座城建反了。绝对不是我的问题。',
+        tags: ['搞笑', '迷路', '和之国']
+      },
+    ];
+
+    let allChars = [];
+    let currentCategory = 'all';
+    let filteredStories = [...STORIES];
+    // Precompute stable like counts and comment counts per story index
+    const stableLikes = STORIES.map(() => Math.floor(100 + Math.random() * 2400));
+    const stableComments = STORIES.map(() => Math.floor(10 + Math.random() * 300));
+
+    const CATEGORY_LABELS = {
+      daily: '日常', battle: '战斗', romance: '浪漫', funny: '搞笑', dark: '暗黑'
+    };
+    const HEIGHT_CLASSES = ['wf-tall', 'wf-medium', 'wf-short'];
+
+    async function init() {
+      const resp = await fetch('/api/characters');
+      allChars = await resp.json();
+      filteredStories = [...STORIES];
+      renderWaterfall();
+    }
+
+    function getChar(id) {
+      return allChars.find(c => c.id === id);
+    }
+
+    // ===== Waterfall Rendering =====
+    function renderWaterfall() {
+      const container = document.getElementById('waterfall');
+      if (filteredStories.length === 0) {
+        container.innerHTML = '<div class="wf-empty">暂无该分类的故事</div>';
+        return;
+      }
+      container.innerHTML = filteredStories.map((s, fi) => {
+        const c = getChar(s.charId);
+        if (!c) return '';
+        const oi = STORIES.indexOf(s);
+        const liked = localStorage.getItem(`liked_${oi}`);
+        const likeCount = liked ? parseInt(liked) : stableLikes[oi];
+        const hClass = HEIGHT_CLASSES[oi % 3];
+        const plainText = s.text.replace(/\n/g, ' ');
+        return `
+          <div class="wf-card ${hClass}" onclick="openViewer(${fi})">
+            <div class="wf-card-img">
+              <img src="${c.image}" alt="${c.name}" loading="lazy" />
+              <span class="wf-category">${CATEGORY_LABELS[s.category] || s.category}</span>
+            </div>
+            <div class="wf-card-body">
+              <div class="wf-card-text">${plainText}</div>
+              <div class="wf-card-footer">
+                <div class="wf-card-author">
+                  <img class="wf-card-avatar" src="${c.image}" alt="${c.name}" />
+                  <span class="wf-card-name">${c.name}</span>
+                </div>
+                <div class="wf-card-likes">
+                  <span class="heart">${liked ? '❤️' : '🤍'}</span>
+                  <span>${likeCount >= 1000 ? (likeCount / 1000).toFixed(1) + 'k' : likeCount}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ===== TikTok Viewer =====
+    let viewerOpen = false;
+    let currentSlideIndex = 0;
+    let lastTapTime = 0;
+
+    function openViewer(startIndex) {
+      viewerOpen = true;
+      currentSlideIndex = startIndex;
+      const viewer = document.getElementById('tkViewer');
+      const scroll = document.getElementById('tkScroll');
+      const progress = document.getElementById('tkProgress');
+
+      // Build slides
+      scroll.innerHTML = filteredStories.map((s, fi) => {
+        const c = getChar(s.charId);
+        if (!c) return '';
+        const oi = STORIES.indexOf(s);
+        const liked = localStorage.getItem(`liked_${oi}`);
+        const likeCount = liked ? parseInt(liked) : stableLikes[oi];
+        const commentCount = stableComments[oi];
+        return `
+          <div class="tk-slide" data-fi="${fi}" data-oi="${oi}">
+            <img class="tk-slide-bg" src="${c.image}" alt="" />
+            <img class="tk-slide-img-sharp" src="${c.image}" alt="" />
+            <div class="tk-slide-overlay"></div>
+
+            <div class="tk-header">
+              <img class="tk-header-avatar" src="${c.image}" alt="${c.name}"
+                onclick="event.stopPropagation(); location.href='/detail.html?id=${c.id}'" />
+              <div class="tk-header-info">
+                <div class="tk-header-name">${c.name}</div>
+                <div class="tk-header-title">${c.title || ''}</div>
+              </div>
+            </div>
+
+            <div class="tk-actions">
+              <div class="tk-action-item">
+                <button class="tk-action-btn ${liked ? 'liked' : ''}" onclick="event.stopPropagation(); tkToggleLike(this, ${oi})" data-oi="${oi}">
+                  ${liked ? '❤️' : '🤍'}
+                </button>
+                <span class="tk-action-label tk-like-count" data-oi="${oi}">${likeCount >= 1000 ? (likeCount / 1000).toFixed(1) + 'k' : likeCount}</span>
+              </div>
+              <div class="tk-action-item">
+                <button class="tk-action-btn" onclick="event.stopPropagation();">💬</button>
+                <span class="tk-action-label">${commentCount}</span>
+              </div>
+              <div class="tk-action-item">
+                <button class="tk-action-btn" onclick="event.stopPropagation();">🔗</button>
+                <span class="tk-action-label">分享</span>
+              </div>
+            </div>
+
+            <div class="tk-slide-content">
+              <div class="tk-scene">${s.scene}</div>
+              <div class="tk-story-text">${s.text.replace(/\n/g, '<br>')}</div>
+              <div class="tk-tags">${s.tags.map(t => `<span class="tk-tag">#${t}</span>`).join('')}</div>
+            </div>
+
+            <div class="tk-bottom-bar">
+              <button class="tk-chat-btn" onclick="event.stopPropagation(); goChat('${c.id}')">和 ${c.name} 聊天</button>
+              <button class="tk-share-btn" onclick="event.stopPropagation();">↗</button>
+            </div>
+
+            ${fi === 0 && filteredStories.length > 1 ? '<div class="tk-swipe-hint"><span class="arrow">↑</span><span>上滑看更多</span></div>' : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Build progress dots
+      progress.innerHTML = filteredStories.map((_, i) =>
+        `<div class="tk-progress-dot ${i === startIndex ? 'active' : ''}"></div>`
+      ).join('');
+
+      viewer.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      // Scroll to the starting slide
+      requestAnimationFrame(() => {
+        const slides = scroll.querySelectorAll('.tk-slide');
+        if (slides[startIndex]) {
+          scroll.scrollTop = slides[startIndex].offsetTop;
+        }
+      });
+
+      // Double-tap for like
+      scroll.addEventListener('click', handleDoubleTap);
+    }
+
+    function closeViewer() {
+      viewerOpen = false;
+      const viewer = document.getElementById('tkViewer');
+      const scroll = document.getElementById('tkScroll');
+      viewer.classList.remove('open');
+      document.body.style.overflow = '';
+      scroll.removeEventListener('click', handleDoubleTap);
+      // Refresh waterfall to reflect like changes
+      renderWaterfall();
+    }
+
+    document.getElementById('tkClose').addEventListener('click', closeViewer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && viewerOpen) closeViewer();
+    });
+
+    // Scroll-snap observer to update progress dots
+    document.getElementById('tkScroll').addEventListener('scroll', () => {
+      const scroll = document.getElementById('tkScroll');
+      const slides = scroll.querySelectorAll('.tk-slide');
+      const scrollTop = scroll.scrollTop;
+      const vh = window.innerHeight;
+      let closest = 0;
+      let minDist = Infinity;
+      slides.forEach((slide, i) => {
+        const dist = Math.abs(slide.offsetTop - scrollTop);
+        if (dist < minDist) { minDist = dist; closest = i; }
+      });
+      if (closest !== currentSlideIndex) {
+        currentSlideIndex = closest;
+        updateProgressDots();
+      }
+    });
+
+    function updateProgressDots() {
+      const dots = document.querySelectorAll('.tk-progress-dot');
+      dots.forEach((d, i) => d.classList.toggle('active', i === currentSlideIndex));
+    }
+
+    // Like toggle in viewer
+    function tkToggleLike(btn, oi) {
+      const key = `liked_${oi}`;
+      const labelEls = document.querySelectorAll(`.tk-like-count[data-oi="${oi}"]`);
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        btn.classList.remove('liked');
+        btn.innerHTML = '🤍';
+        const newCount = stableLikes[oi];
+        labelEls.forEach(el => el.textContent = newCount >= 1000 ? (newCount / 1000).toFixed(1) + 'k' : newCount);
+      } else {
+        const newCount = stableLikes[oi] + 1;
+        localStorage.setItem(key, newCount);
+        btn.classList.add('liked');
+        btn.innerHTML = '❤️';
+        btn.classList.remove('heart-anim');
+        void btn.offsetWidth; // reflow
+        btn.classList.add('heart-anim');
+        labelEls.forEach(el => el.textContent = newCount >= 1000 ? (newCount / 1000).toFixed(1) + 'k' : newCount);
+      }
+    }
+
+    // Double-tap to like
+    function handleDoubleTap(e) {
+      const now = Date.now();
+      if (now - lastTapTime < 350) {
+        // Double tap detected
+        const scroll = document.getElementById('tkScroll');
+        const slides = scroll.querySelectorAll('.tk-slide');
+        const slide = slides[currentSlideIndex];
+        if (!slide) return;
+        const oi = parseInt(slide.dataset.oi);
+        const key = `liked_${oi}`;
+
+        // Show floating heart
+        const heart = document.createElement('div');
+        heart.className = 'tk-floating-heart';
+        heart.textContent = '❤️';
+        heart.style.left = (e.clientX - 40) + 'px';
+        heart.style.top = (e.clientY - 40) + 'px';
+        slide.appendChild(heart);
+        setTimeout(() => heart.remove(), 1000);
+
+        // Like if not already liked
+        if (!localStorage.getItem(key)) {
+          const btn = slide.querySelector('.tk-action-btn[data-oi="' + oi + '"]');
+          if (btn) tkToggleLike(btn, oi);
+        }
+      }
+      lastTapTime = now;
+    }
+
+    function goChat(id) {
+      const provider = localStorage.getItem('ai_provider') || 'anthropic';
+      const key = localStorage.getItem(`apikey_${provider}`) || localStorage.getItem('anthropic_api_key');
+      if (!key) {
+        alert('请先在首页设置 API Key');
+        location.href = '/';
+        return;
+      }
+      location.href = `/chat.html?id=${id}`;
+    }
+
+    function filterStories(category, btn) {
+      currentCategory = category;
+      document.querySelectorAll('.story-tab').forEach(t => t.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      if (category === 'all') {
+        filteredStories = [...STORIES];
+      } else {
+        filteredStories = STORIES.filter(s => s.category === category);
+      }
+      renderWaterfall();
+    }
+
+    init();
+  </script>
+</body>
+</html>

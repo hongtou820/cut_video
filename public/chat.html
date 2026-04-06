@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>聊天中 - 次元聊</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <button class="chat-back" onclick="window.location.href='/'">←</button>
+      <img class="chat-char-avatar" id="charAvatar" src="" alt="" />
+      <div class="chat-char-info">
+        <h2 id="charName"></h2>
+        <p><span class="online-dot"></span><span id="charTitle"></span></p>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="messages"></div>
+
+    <div class="chat-input-area">
+      <input class="chat-input" id="chatInput" placeholder="输入消息..." autocomplete="off" />
+      <button class="chat-send" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const charId = params.get('id');
+    const provider = localStorage.getItem('ai_provider') || 'anthropic';
+    const apiKey = localStorage.getItem(`apikey_${provider}`) || localStorage.getItem('anthropic_api_key');
+
+    if (!charId || !apiKey) window.location.href = '/';
+
+    const PROVIDER_LABELS = { anthropic: 'Claude', openai: 'GPT', gemini: 'Gemini', deepseek: 'DeepSeek' };
+
+    let character = null;
+    let sessionId = null;
+    let sending = false;
+
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    async function init() {
+      const resp = await fetch(`/api/characters/${charId}`);
+      character = await resp.json();
+
+      const avatar = document.getElementById('charAvatar');
+      avatar.src = character.image;
+      avatar.onerror = function() {
+        this.style.display = 'none';
+      };
+      document.getElementById('charName').textContent = character.name;
+      document.getElementById('charTitle').textContent = `${character.title} · ${PROVIDER_LABELS[provider] || provider}`;
+      document.title = `${character.name} - 次元聊`;
+
+      addMessage('assistant', character.greeting);
+      inputEl.focus();
+    }
+
+    function addMessage(role, text) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function showTyping() {
+      const div = document.createElement('div');
+      div.className = 'typing-indicator show';
+      div.id = 'typing';
+      div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function hideTyping() {
+      const el = document.getElementById('typing');
+      if (el) el.remove();
+    }
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text || sending) return;
+
+      sending = true;
+      sendBtn.disabled = true;
+      inputEl.value = '';
+
+      addMessage('user', text);
+      showTyping();
+
+      try {
+        const resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ characterId: charId, message: text, sessionId, apiKey, provider }),
+        });
+
+        const data = await resp.json();
+        hideTyping();
+
+        if (!resp.ok) throw new Error(data.error);
+
+        sessionId = data.sessionId;
+        addMessage('assistant', data.reply);
+      } catch (err) {
+        hideTyping();
+        addMessage('system', `⚠ ${err.message}`);
+      } finally {
+        sending = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

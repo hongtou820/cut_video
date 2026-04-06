@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a00"/>
+      <stop offset="100%" style="stop-color:#2d2d00"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#f1c40f;stop-opacity:0.2"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Fluffy spotted hat -->
+  <ellipse cx="200" cy="130" rx="100" ry="55" fill="white"/>
+  <circle cx="165" cy="115" r="12" fill="#2c2c2c"/>
+  <circle cx="200" cy="105" r="14" fill="#2c2c2c"/>
+  <circle cx="235" cy="115" r="12" fill="#2c2c2c"/>
+  <circle cx="180" cy="135" r="10" fill="#2c2c2c"/>
+  <circle cx="220" cy="135" r="10" fill="#2c2c2c"/>
+  <circle cx="150" cy="130" r="8" fill="#2c2c2c"/>
+  <circle cx="250" cy="130" r="8" fill="#2c2c2c"/>
+  <!-- Hat brim -->
+  <ellipse cx="200" cy="155" rx="105" ry="18" fill="white" stroke="#ddd" stroke-width="1"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="240" rx="80" ry="90" fill="#f5deb3"/>
+  <!-- Dark circles under eyes -->
+  <ellipse cx="170" cy="240" rx="22" ry="8" fill="#555" opacity="0.3"/>
+  <ellipse cx="230" cy="240" rx="22" ry="8" fill="#555" opacity="0.3"/>
+  <!-- Goatee -->
+  <path d="M185 285 Q200 310 215 285" fill="#1a1a1a"/>
+  <!-- Dark sideburns -->
+  <path d="M120 200 Q115 240 125 270" fill="#1a1a1a"/>
+  <path d="M280 200 Q285 240 275 270" fill="#1a1a1a"/>
+  <!-- Hair under hat -->
+  <path d="M120 170 Q120 155 140 155 L260 155 Q280 155 280 170 L280 200 Q270 180 200 180 Q130 180 120 200 Z" fill="#1a1a1a"/>
+  <!-- Eyes - sharp, calculating -->
+  <path d="M150 230 L190 230 L190 245 L150 245 Z" fill="white"/>
+  <path d="M210 230 L250 230 L250 245 L210 245 Z" fill="white"/>
+  <circle cx="172" cy="237" r="8" fill="#666"/>
+  <circle cx="232" cy="237" r="8" fill="#666"/>
+  <circle cx="174" cy="235" r="3" fill="white"/>
+  <circle cx="234" cy="235" r="3" fill="white"/>
+  <!-- Sharp eyebrows -->
+  <line x1="148" y1="218" x2="192" y2="222" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+  <line x1="208" y1="222" x2="252" y2="218" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+  <!-- Slight smirk -->
+  <path d="M175 272 Q200 280 225 270" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Body - yellow hoodie -->
+  <path d="M125 325 Q200 310 275 325 L290 500 L110 500 Z" fill="#f1c40f"/>
+  <!-- Hoodie logo - Death symbol -->
+  <circle cx="200" cy="400" r="30" fill="none" stroke="#1a1a1a" stroke-width="3"/>
+  <text x="200" y="408" text-anchor="middle" fill="#1a1a1a" font-size="24" font-family="serif" font-weight="bold">D</text>
+  <!-- Finger tattoos -->
+  <text x="130" y="350" fill="#3498db" font-size="10" font-family="serif" font-weight="bold">D E A T H</text>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">LAW</text>
+</svg>

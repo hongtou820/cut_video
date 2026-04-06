@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0514"/>
+      <stop offset="100%" style="stop-color:#2d0a22"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#e74c9a;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Long flowing black hair -->
+  <path d="M110 175 Q120 60 180 100 Q200 40 220 100 Q280 60 290 175" fill="#0a0a1a"/>
+  <path d="M110 175 Q95 280 85 450" fill="#0a0a1a"/>
+  <path d="M290 175 Q305 280 315 450" fill="#0a0a1a"/>
+  <!-- Face - tilted up (looking down pose) -->
+  <ellipse cx="200" cy="215" rx="72" ry="85" fill="#fce4b8"/>
+  <!-- Snake earrings -->
+  <path d="M128 230 Q120 250 128 270 Q125 280 130 285" fill="none" stroke="#f1c40f" stroke-width="3"/>
+  <path d="M272 230 Q280 250 272 270 Q275 280 270 285" fill="none" stroke="#f1c40f" stroke-width="3"/>
+  <!-- Beautiful eyes (slightly looking down) -->
+  <ellipse cx="170" cy="215" rx="17" ry="19" fill="white"/>
+  <ellipse cx="230" cy="215" rx="17" ry="19" fill="white"/>
+  <circle cx="170" cy="218" r="12" fill="#1a1a5e"/>
+  <circle cx="230" cy="218" r="12" fill="#1a1a5e"/>
+  <circle cx="174" cy="214" r="4" fill="white"/>
+  <circle cx="234" cy="214" r="4" fill="white"/>
+  <!-- Long eyelashes -->
+  <path d="M153 200 L148 192" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M158 197 L155 189" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M163 196 L162 188" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M247 200 L252 192" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M242 197 L245 189" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M237 196 L238 188" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Arched eyebrows -->
+  <path d="M152 200 Q170 188 188 200" fill="none" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M212 200 Q230 188 248 200" fill="none" stroke="#0a0a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Red lips -->
+  <path d="M182 260 Q200 272 218 260" fill="#c0397a"/>
+  <path d="M185 260 Q200 265 215 260" fill="#e74c9a" opacity="0.5"/>
+  <!-- Nose -->
+  <path d="M198 240 Q200 250 202 240" fill="none" stroke="#d4a574" stroke-width="1.5"/>
+  <!-- Body - qipao style dress -->
+  <path d="M140 298 Q200 285 260 298 L265 500 L135 500 Z" fill="#c0397a"/>
+  <!-- Gold snake patterns on dress -->
+  <path d="M160 350 Q180 340 200 360 Q220 340 240 350" fill="none" stroke="#f1c40f" stroke-width="2"/>
+  <path d="M160 400 Q180 390 200 410 Q220 390 240 400" fill="none" stroke="#f1c40f" stroke-width="2"/>
+  <!-- Heart symbol (love love fruit) -->
+  <path d="M190 440 Q200 425 210 440 Q215 450 200 465 Q185 450 190 440" fill="#e74c9a" opacity="0.5"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="22" font-family="sans-serif" font-weight="bold" opacity="0.8">HANCOCK</text>
+</svg>

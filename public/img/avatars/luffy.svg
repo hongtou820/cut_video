@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0a0a"/>
+      <stop offset="100%" style="stop-color:#2d1010"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Straw Hat -->
+  <ellipse cx="200" cy="135" rx="120" ry="30" fill="#f4d03f" stroke="#c9a520" stroke-width="3"/>
+  <path d="M110 135 Q200 40 290 135" fill="#f4d03f" stroke="#c9a520" stroke-width="3"/>
+  <rect x="110" y="125" width="180" height="15" rx="3" fill="#e74c3c"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="240" rx="85" ry="95" fill="#fce4b8"/>
+  <!-- Hair - messy black -->
+  <path d="M115 200 Q130 130 160 150 Q170 100 200 130 Q220 90 250 130 Q270 100 280 150 Q290 130 285 200" fill="#1a1a1a"/>
+  <!-- Scar under left eye -->
+  <line x1="165" y1="235" x2="175" y2="250" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+  <!-- Eyes - big excited -->
+  <ellipse cx="170" cy="240" rx="18" ry="20" fill="white"/>
+  <ellipse cx="230" cy="240" rx="18" ry="20" fill="white"/>
+  <circle cx="172" cy="238" r="12" fill="#2c2c2c"/>
+  <circle cx="232" cy="238" r="12" fill="#2c2c2c"/>
+  <circle cx="176" cy="234" r="4" fill="white"/>
+  <circle cx="236" cy="234" r="4" fill="white"/>
+  <!-- Big grin -->
+  <path d="M155 275 Q200 330 245 275" fill="white" stroke="#333" stroke-width="2"/>
+  <path d="M160 275 Q200 310 240 275" fill="none" stroke="#e74c3c" stroke-width="1"/>
+  <!-- Eyebrows -->
+  <path d="M150 218 Q170 208 188 218" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+  <path d="M212 218 Q230 208 250 218" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+  <!-- Body - red vest -->
+  <path d="M130 330 Q200 310 270 330 L290 500 L110 500 Z" fill="#e74c3c"/>
+  <path d="M180 330 L175 500" stroke="#c0392b" stroke-width="2"/>
+  <path d="M220 330 L225 500" stroke="#c0392b" stroke-width="2"/>
+  <!-- X scar on chest -->
+  <line x1="180" y1="360" x2="220" y2="420" stroke="#fce4b8" stroke-width="4"/>
+  <line x1="220" y1="360" x2="180" y2="420" stroke="#fce4b8" stroke-width="4"/>
+  <!-- Name -->
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">LUFFY</text>
+</svg>

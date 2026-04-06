@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0a1a"/>
+      <stop offset="100%" style="stop-color:#1a0d2d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#8e44ad;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="220" rx="72" ry="90" fill="#f5deb3"/>
+  <!-- Long black hair -->
+  <path d="M125 185 Q135 90 175 120 Q190 75 215 110 Q235 70 260 115 Q280 90 275 185" fill="#1a1a2e"/>
+  <path d="M125 185 Q115 260 110 370" fill="#1a1a2e"/>
+  <path d="M275 185 Q285 260 290 370" fill="#1a1a2e"/>
+  <!-- Straight bangs -->
+  <rect x="140" y="155" width="120" height="25" rx="5" fill="#1a1a2e"/>
+  <!-- Elegant eyes -->
+  <ellipse cx="170" cy="225" rx="16" ry="18" fill="white"/>
+  <ellipse cx="230" cy="225" rx="16" ry="18" fill="white"/>
+  <circle cx="172" cy="223" r="11" fill="#3498db"/>
+  <circle cx="232" cy="223" r="11" fill="#3498db"/>
+  <circle cx="175" cy="219" r="4" fill="white"/>
+  <circle cx="235" cy="219" r="4" fill="white"/>
+  <!-- Long eyelashes -->
+  <path d="M154 212 L150 205" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+  <path d="M158 209 L156 202" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+  <path d="M162 208 L162 201" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+  <path d="M246 212 L250 205" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+  <path d="M242 209 L244 202" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+  <path d="M238 208 L238 201" stroke="#1a1a2e" stroke-width="2" stroke-linecap="round"/>
+  <!-- Thin eyebrows -->
+  <path d="M155 207 Q170 199 186 207" fill="none" stroke="#1a1a2e" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M214 207 Q230 199 246 207" fill="none" stroke="#1a1a2e" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Mysterious smile -->
+  <path d="M180 265 Q200 275 220 265" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+  <!-- Body - purple outfit -->
+  <path d="M135 305 Q200 292 265 305 L270 500 L130 500 Z" fill="#8e44ad"/>
+  <!-- Cowboy hat sunglasses on head (optional accessory) -->
+  <path d="M155 310 L170 360 L200 340 L230 360 L245 310" fill="#6c3483" stroke="#5b2c6f" stroke-width="1"/>
+  <!-- Flower hands emerging (signature move hint) -->
+  <path d="M100 420 Q110 400 120 420 Q130 400 140 420" fill="none" stroke="#f5deb3" stroke-width="3"/>
+  <path d="M260 420 Q270 400 280 420 Q290 400 300 420" fill="none" stroke="#f5deb3" stroke-width="3"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">ROBIN</text>
+</svg>

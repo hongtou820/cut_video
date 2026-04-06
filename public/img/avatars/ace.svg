@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0d00"/>
+      <stop offset="100%" style="stop-color:#2d1800"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#e67e22;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:transparent"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg)"/>
+  <rect width="400" height="500" fill="url(#glow)"/>
+  <!-- Fire effects -->
+  <ellipse cx="140" cy="350" rx="30" ry="60" fill="#e67e22" opacity="0.3"/>
+  <ellipse cx="260" cy="350" rx="30" ry="60" fill="#e67e22" opacity="0.3"/>
+  <ellipse cx="140" cy="330" rx="20" ry="40" fill="#f39c12" opacity="0.4"/>
+  <ellipse cx="260" cy="330" rx="20" ry="40" fill="#f39c12" opacity="0.4"/>
+  <!-- Orange hat -->
+  <ellipse cx="200" cy="140" rx="95" ry="25" fill="#e67e22"/>
+  <path d="M130 140 Q200 60 270 140" fill="#e67e22"/>
+  <!-- Hat smiley faces -->
+  <circle cx="170" cy="110" r="8" fill="none" stroke="#fff" stroke-width="2"/>
+  <circle cx="230" cy="110" r="8" fill="none" stroke="#fff" stroke-width="2"/>
+  <!-- Hat band -->
+  <rect x="130" y="130" width="140" height="12" rx="3" fill="#c0392b"/>
+  <!-- Face -->
+  <ellipse cx="200" cy="230" rx="85" ry="90" fill="#d4a574"/>
+  <!-- Freckles -->
+  <circle cx="155" cy="240" r="3" fill="#8b6914"/>
+  <circle cx="165" cy="245" r="3" fill="#8b6914"/>
+  <circle cx="160" cy="235" r="3" fill="#8b6914"/>
+  <circle cx="235" cy="240" r="3" fill="#8b6914"/>
+  <circle cx="245" cy="245" r="3" fill="#8b6914"/>
+  <circle cx="240" cy="235" r="3" fill="#8b6914"/>
+  <!-- Wavy black hair -->
+  <path d="M115 195 Q130 120 170 150 Q185 110 210 140 Q230 100 255 140 Q275 120 285 195" fill="#1a1a1a"/>
+  <!-- Eyes - confident -->
+  <ellipse cx="170" cy="230" rx="15" ry="16" fill="white"/>
+  <ellipse cx="230" cy="230" rx="15" ry="16" fill="white"/>
+  <circle cx="172" cy="228" r="10" fill="#2c2c2c"/>
+  <circle cx="232" cy="228" r="10" fill="#2c2c2c"/>
+  <circle cx="175" cy="225" r="3" fill="white"/>
+  <circle cx="235" cy="225" r="3" fill="white"/>
+  <!-- Confident grin -->
+  <path d="M165 270 Q200 300 235 270" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+  <!-- Body - shirtless with necklace -->
+  <path d="M130 315 Q200 300 270 315 L280 500 L120 500 Z" fill="#d4a574"/>
+  <!-- Red bead necklace -->
+  <path d="M135 315 Q200 340 265 315" fill="none" stroke="#c0392b" stroke-width="8" stroke-linecap="round" stroke-dasharray="10,5"/>
+  <!-- ASCE tattoo on arm -->
+  <text x="120" y="380" fill="#1a1a1a" font-size="20" font-family="serif" font-weight="bold" transform="rotate(-15, 120, 380)">ASCE</text>
+  <!-- Abs lines -->
+  <line x1="200" y1="350" x2="200" y2="450" stroke="#c49660" stroke-width="2"/>
+  <path d="M175 380 Q200 385 225 380" fill="none" stroke="#c49660" stroke-width="1.5"/>
+  <path d="M175 405 Q200 410 225 405" fill="none" stroke="#c49660" stroke-width="1.5"/>
+  <text x="200" y="480" text-anchor="middle" fill="white" font-size="24" font-family="sans-serif" font-weight="bold" opacity="0.8">ACE</text>
+</svg>

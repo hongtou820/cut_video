@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>角色详情 - 次元聊</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .detail-page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px;
+      background: rgba(18, 18, 26, 0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .detail-back {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .detail-header-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .detail-hero {
+      display: flex;
+      gap: 30px;
+      margin-top: 30px;
+      align-items: flex-start;
+    }
+    @media (max-width: 640px) {
+      .detail-hero { flex-direction: column; align-items: center; }
+    }
+
+    .detail-img-wrap {
+      width: 300px;
+      min-width: 300px;
+      height: 400px;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      background: var(--bg3);
+      flex-shrink: 0;
+    }
+    .detail-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      animation: breathe 4s ease-in-out infinite;
+    }
+    .detail-img-wrap::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 60px;
+      background: linear-gradient(transparent, rgba(10,10,15,0.8));
+    }
+
+    .detail-info { flex: 1; }
+    .detail-name { font-size: 32px; font-weight: 800; margin-bottom: 4px; }
+    .detail-fullname { font-size: 14px; color: var(--text2); margin-bottom: 8px; }
+    .detail-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .detail-title-text { font-size: 14px; color: var(--accent); }
+    .detail-gender-badge { font-size: 11px; padding: 3px 10px; border-radius: 8px; font-weight: 500; }
+    .detail-gender-badge.male { background: rgba(108,92,231,0.2); color: #a29bfe; }
+    .detail-gender-badge.female { background: rgba(255,107,157,0.2); color: #ff6b9d; }
+    .detail-desc { font-size: 14px; line-height: 1.8; color: var(--text2); margin-bottom: 16px; }
+    .detail-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .detail-tags .char-tag { font-size: 12px; padding: 4px 14px; }
+
+    .detail-chat-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--accent), #6b5ce7);
+      color: #fff; border: none; padding: 14px 36px;
+      border-radius: 28px; font-size: 16px; font-weight: 600;
+      cursor: pointer; transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(124,106,239,0.4); margin-bottom: 30px;
+    }
+    .detail-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124,106,239,0.5); }
+
+    .action-section { margin-top: 10px; }
+    .action-section h3 { font-size: 18px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 640px) {
+      .action-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .action-btn {
+      background: var(--bg3);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 14px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      color: var(--text);
+    }
+    .action-btn:hover {
+      border-color: var(--accent);
+      background: rgba(124,106,239,0.1);
+      transform: translateY(-2px);
+    }
+    .action-btn.playing {
+      border-color: var(--accent2);
+      background: rgba(255,107,157,0.15);
+      box-shadow: 0 0 20px rgba(255,107,157,0.2);
+    }
+    .action-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+    .action-label { font-size: 12px; color: var(--text2); }
+
+    /* Video overlay - fullscreen canvas player */
+    .video-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .video-overlay.show { display: flex; }
+    .video-canvas-wrap {
+      position: relative;
+      width: 380px;
+      height: 540px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(124,106,239,0.3);
+    }
+    .video-canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .video-action-name {
+      font-size: 22px; font-weight: 700; margin-top: 16px;
+      background: linear-gradient(135deg, #fff, var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-shadow: none;
+    }
+    .video-timer { margin-top: 10px; font-size: 13px; color: var(--text2); }
+    .video-timer-bar {
+      width: 380px; height: 4px; background: rgba(255,255,255,0.1);
+      border-radius: 2px; margin-top: 8px; overflow: hidden;
+    }
+    .video-timer-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.05s linear;
+    }
+    .video-close {
+      position: absolute; top: 20px; right: 20px;
+      background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff; width: 44px; height: 44px;
+      border-radius: 50%; font-size: 22px; cursor: pointer; z-index: 301;
+    }
+    .video-close:hover { background: rgba(255,255,255,0.25); }
+  </style>
+</head>
+<body>
+  <div class="detail-header">
+    <button class="detail-back" onclick="window.location.href='/'">←</button>
+    <div class="detail-header-title" id="headerTitle">角色详情</div>
+  </div>
+
+  <div class="detail-page">
+    <div class="detail-hero">
+      <div class="detail-img-wrap">
+        <img id="charImg" src="" alt="" />
+      </div>
+      <div class="detail-info">
+        <div class="detail-name" id="charName"></div>
+        <div class="detail-fullname" id="charFullName"></div>
+        <div class="detail-title-row">
+          <span class="detail-title-text" id="charTitle"></span>
+          <span class="detail-gender-badge" id="charGender"></span>
+        </div>
+        <div class="detail-desc" id="charDesc"></div>
+        <div class="detail-tags" id="charTags"></div>
+        <button class="detail-chat-btn" onclick="goChat()">💬 开始聊天</button>
+        <div class="action-section">
+          <h3>动作表演</h3>
+          <div class="action-grid" id="actionGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Video Overlay with Canvas -->
+  <div class="video-overlay" id="videoOverlay">
+    <button class="video-close" onclick="stopVideo()">×</button>
+    <div class="video-canvas-wrap">
+      <canvas id="videoCanvas" width="760" height="1080"></canvas>
+    </div>
+    <div class="video-action-name" id="videoActionName"></div>
+    <div class="video-timer"><span id="videoTime">5.0</span>s</div>
+    <div class="video-timer-bar"><div class="video-timer-fill" id="videoTimerFill"></div></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const charId = params.get('id');
+    if (!charId) window.location.href = '/';
+
+    const MALE_ACTIONS = [
+      { id: 'punch', icon: '👊', label: '出拳', type: 'impact' },
+      { id: 'sword', icon: '⚔️', label: '拔刀', type: 'slash' },
+      { id: 'haki', icon: '🔥', label: '霸气释放', type: 'aura' },
+      { id: 'stance', icon: '🥊', label: '战斗姿态', type: 'focus' },
+      { id: 'special', icon: '💥', label: '必杀技', type: 'explosion' },
+      { id: 'taunt', icon: '😏', label: '挑衅', type: 'flash' },
+      { id: 'transform', icon: '⚡', label: '变身', type: 'lightning' },
+      { id: 'charge', icon: '🏃', label: '冲锋', type: 'speed' },
+      { id: 'defend', icon: '🛡️', label: '防御', type: 'shield' },
+      { id: 'victory', icon: '🏆', label: '胜利宣言', type: 'celebration' },
+    ];
+
+    const FEMALE_ACTIONS = [
+      { id: 'wink', icon: '😘', label: '抛媚眼', type: 'hearts' },
+      { id: 'hairflip', icon: '💇‍♀️', label: '撩发', type: 'sparkle' },
+      { id: 'lookback', icon: '🌸', label: '回眸一笑', type: 'petals' },
+      { id: 'dance', icon: '💃', label: '热舞', type: 'rhythm' },
+      { id: 'shy', icon: '🙈', label: '害羞', type: 'blush' },
+      { id: 'smile', icon: '😊', label: '甜笑', type: 'glow' },
+      { id: 'stretch', icon: '🙆‍♀️', label: '伸懒腰', type: 'sparkle' },
+      { id: 'turn', icon: '🔄', label: '转身', type: 'wind' },
+      { id: 'kiss', icon: '💋', label: '飞吻', type: 'hearts' },
+      { id: 'hug', icon: '🤗', label: '拥抱', type: 'warmth' },
+    ];
+
+    let character = null;
+    let charImage = null; // preloaded Image object
+    let animationId = null;
+    let countdownTimer = null;
+
+    async function init() {
+      const resp = await fetch(`/api/characters/${charId}`);
+      if (!resp.ok) { window.location.href = '/'; return; }
+      character = await resp.json();
+
+      document.getElementById('headerTitle').textContent = character.name;
+      document.getElementById('charName').textContent = character.name;
+      document.getElementById('charFullName').textContent = character.fullName;
+      document.getElementById('charTitle').textContent = character.title;
+      document.getElementById('charImg').src = character.image;
+      document.getElementById('charDesc').textContent = character.description;
+      document.title = `${character.name} - 次元聊`;
+
+      const genderEl = document.getElementById('charGender');
+      genderEl.textContent = character.gender === 'male' ? '♂ 男' : '♀ 女';
+      genderEl.className = `detail-gender-badge ${character.gender}`;
+
+      document.getElementById('charTags').innerHTML =
+        character.tags.map(t => `<span class="char-tag">${t}</span>`).join('');
+
+      // Preload image for canvas
+      charImage = new Image();
+      charImage.crossOrigin = 'anonymous';
+      charImage.src = character.image;
+
+      const actions = character.gender === 'female' ? FEMALE_ACTIONS : MALE_ACTIONS;
+      document.getElementById('actionGrid').innerHTML = actions.map((a, i) => `
+        <div class="action-btn" data-idx="${i}" onclick="playAction(${i}, this)">
+          <span class="action-icon">${a.icon}</span>
+          <span class="action-label">${a.label}</span>
+        </div>
+      `).join('');
+    }
+
+    function goChat() {
+      const provider = localStorage.getItem('ai_provider') || 'anthropic';
+      const key = localStorage.getItem(`apikey_${provider}`) || localStorage.getItem('anthropic_api_key');
+      if (!key) {
+        alert('请先在首页设置 API Key');
+        window.location.href = '/';
+        return;
+      }
+      window.location.href = `/chat.html?id=${charId}`;
+    }
+
+    // ===== Canvas animation engine =====
+    const canvas = document.getElementById('videoCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    let particles = [];
+    let startTime = 0;
+    let activeBtn = null;
+    let currentAction = null;
+
+    // Particle class
+    class Particle {
+      constructor(x, y, opts = {}) {
+        this.x = x; this.y = y;
+        this.vx = opts.vx || (Math.random() - 0.5) * 4;
+        this.vy = opts.vy || (Math.random() - 0.5) * 4;
+        this.life = opts.life || 1;
+        this.decay = opts.decay || 0.01 + Math.random() * 0.02;
+        this.size = opts.size || 3 + Math.random() * 5;
+        this.color = opts.color || '#ff6b9d';
+        this.shape = opts.shape || 'circle'; // circle, heart, star, line
+        this.angle = Math.random() * Math.PI * 2;
+        this.spin = (Math.random() - 0.5) * 0.1;
+        this.gravity = opts.gravity || 0;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.life -= this.decay;
+        this.angle += this.spin;
+      }
+      draw(ctx) {
+        if (this.life <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+        ctx.fillStyle = this.color;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = this.size * 2;
+
+        if (this.shape === 'heart') {
+          this.drawHeart(ctx, this.size);
+        } else if (this.shape === 'star') {
+          this.drawStar(ctx, this.size);
+        } else if (this.shape === 'line') {
+          ctx.strokeStyle = this.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-this.size, 0);
+          ctx.lineTo(this.size, 0);
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      drawHeart(ctx, s) {
+        ctx.beginPath();
+        ctx.moveTo(0, s * 0.4);
+        ctx.bezierCurveTo(-s, -s * 0.3, -s * 0.5, -s, 0, -s * 0.5);
+        ctx.bezierCurveTo(s * 0.5, -s, s, -s * 0.3, 0, s * 0.4);
+        ctx.fill();
+      }
+      drawStar(ctx, s) {
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = (i * 4 * Math.PI / 5) - Math.PI / 2;
+          const r = i === 0 ? s : s;
+          ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
+          const a2 = a + 2 * Math.PI / 5;
+          ctx.lineTo(Math.cos(a2) * s * 0.4, Math.sin(a2) * s * 0.4);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // Effect generators per action type
+    const effects = {
+      // Female effects
+      hearts(t, dt) {
+        if (Math.random() < 0.3) {
+          particles.push(new Particle(
+            Math.random() * W, H + 10,
+            { vx: (Math.random() - 0.5) * 3, vy: -3 - Math.random() * 4, size: 8 + Math.random() * 12,
+              color: ['#ff6b9d', '#ff4081', '#e91e63', '#f06292'][Math.floor(Math.random()*4)],
+              shape: 'heart', decay: 0.008, gravity: -0.02, spin: (Math.random()-0.5)*0.05 }
+          ));
+        }
+      },
+      sparkle(t, dt) {
+        if (Math.random() < 0.4) {
+          particles.push(new Particle(
+            Math.random() * W, Math.random() * H,
+            { vx: 0, vy: 0, size: 2 + Math.random() * 6,
+              color: ['#fff', '#ffd700', '#ff6b9d', '#7c6aef'][Math.floor(Math.random()*4)],
+              shape: 'star', decay: 0.03 + Math.random() * 0.03, spin: 0.1 }
+          ));
+        }
+      },
+      petals(t, dt) {
+        if (Math.random() < 0.25) {
+          particles.push(new Particle(
+            Math.random() * W, -20,
+            { vx: 1 + Math.random() * 2, vy: 2 + Math.random() * 3, size: 6 + Math.random() * 8,
+              color: ['#ffb7c5', '#ff69b4', '#ffc0cb', '#dda0dd'][Math.floor(Math.random()*4)],
+              shape: 'circle', decay: 0.005, gravity: 0.02, spin: 0.05 }
+          ));
+        }
+      },
+      rhythm(t, dt) {
+        const beat = Math.sin(t * 8) > 0.7;
+        if (beat && Math.random() < 0.5) {
+          const angle = Math.random() * Math.PI * 2;
+          particles.push(new Particle(
+            W/2 + Math.cos(angle) * 100, H/2 + Math.sin(angle) * 100,
+            { vx: Math.cos(angle) * 5, vy: Math.sin(angle) * 5, size: 4 + Math.random() * 6,
+              color: ['#ff6b9d', '#7c6aef', '#00d2ff', '#ffd700'][Math.floor(Math.random()*4)],
+              decay: 0.025 }
+          ));
+        }
+      },
+      blush(t, dt) {
+        if (Math.random() < 0.15) {
+          particles.push(new Particle(
+            W/2 + (Math.random() - 0.5) * 200, H * 0.35 + (Math.random() - 0.5) * 60,
+            { vx: (Math.random()-0.5)*2, vy: -0.5 - Math.random(), size: 10 + Math.random() * 15,
+              color: 'rgba(255,107,157,0.4)', decay: 0.01, shape: 'circle' }
+          ));
+        }
+      },
+      glow(t, dt) {
+        if (Math.random() < 0.2) {
+          const angle = Math.random() * Math.PI * 2;
+          const r = 50 + Math.random() * 150;
+          particles.push(new Particle(
+            W/2 + Math.cos(angle) * r, H/2 + Math.sin(angle) * r,
+            { vx: 0, vy: -1, size: 3 + Math.random() * 8,
+              color: ['#fff8dc', '#ffd700', '#fff', '#ffecb3'][Math.floor(Math.random()*4)],
+              shape: 'star', decay: 0.015, spin: 0.08 }
+          ));
+        }
+      },
+      wind(t, dt) {
+        if (Math.random() < 0.5) {
+          particles.push(new Particle(
+            -10, Math.random() * H,
+            { vx: 8 + Math.random() * 10, vy: (Math.random()-0.5) * 2, size: 1 + Math.random() * 3,
+              color: 'rgba(255,255,255,0.6)', shape: 'line', decay: 0.02, life: 0.8 }
+          ));
+        }
+      },
+      warmth(t, dt) {
+        if (Math.random() < 0.2) {
+          particles.push(new Particle(
+            W/2 + (Math.random()-0.5) * 300, H + 10,
+            { vx: (Math.random()-0.5)*1, vy: -1.5 - Math.random()*2, size: 6 + Math.random() * 10,
+              color: ['#ff6b9d', '#ff9a76', '#ffd93d', '#ff6348'][Math.floor(Math.random()*4)],
+              decay: 0.006, gravity: -0.01 }
+          ));
+        }
+      },
+
+      // Male effects
+      impact(t, dt) {
+        if (t < 0.3 || (t > 1 && t < 1.3) || (t > 2.5 && t < 2.8)) {
+          for (let i = 0; i < 3; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            particles.push(new Particle(
+              W/2 + Math.cos(angle) * 30, H * 0.4,
+              { vx: Math.cos(angle) * (5 + Math.random()*10), vy: Math.sin(angle) * (5 + Math.random()*10),
+                size: 3 + Math.random() * 6,
+                color: ['#ff4444', '#ff6600', '#ffaa00', '#fff'][Math.floor(Math.random()*4)],
+                decay: 0.03 }
+            ));
+          }
+        }
+      },
+      slash(t, dt) {
+        if (Math.random() < 0.15) {
+          const y = H * 0.2 + Math.random() * H * 0.6;
+          particles.push(new Particle(
+            W * 0.1, y,
+            { vx: 15 + Math.random() * 10, vy: (Math.random()-0.5) * 4, size: 2 + Math.random() * 4,
+              color: ['#b0c4de', '#e0e8ff', '#fff', '#87ceeb'][Math.floor(Math.random()*4)],
+              shape: 'line', decay: 0.04, life: 0.9 }
+          ));
+        }
+      },
+      aura(t, dt) {
+        if (Math.random() < 0.4) {
+          const angle = Math.random() * Math.PI * 2;
+          const r = 80 + Math.random() * 120;
+          particles.push(new Particle(
+            W/2 + Math.cos(angle) * r, H/2 + Math.sin(angle) * r,
+            { vx: -Math.cos(angle) * 2, vy: -Math.sin(angle) * 2 - 1,
+              size: 4 + Math.random() * 8,
+              color: ['#7c6aef', '#6c5ce7', '#4834d4', '#a29bfe'][Math.floor(Math.random()*4)],
+              decay: 0.012 }
+          ));
+        }
+      },
+      focus(t, dt) {
+        if (Math.random() < 0.15) {
+          particles.push(new Particle(
+            Math.random() * W, Math.random() * H,
+            { vx: (W/2 - Math.random()*W) * 0.02, vy: (H/2 - Math.random()*H) * 0.02,
+              size: 2 + Math.random() * 4, color: '#7c6aef', shape: 'circle', decay: 0.02 }
+          ));
+        }
+      },
+      explosion(t, dt) {
+        const burst = (t < 0.2) || (t > 2 && t < 2.2) || (t > 4 && t < 4.2);
+        if (burst) {
+          for (let i = 0; i < 8; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 5 + Math.random() * 15;
+            particles.push(new Particle(
+              W/2, H/2,
+              { vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+                size: 3 + Math.random()*8,
+                color: ['#ff0', '#f80', '#f00', '#fff', '#ff6b9d'][Math.floor(Math.random()*5)],
+                decay: 0.02, gravity: 0.1 }
+            ));
+          }
+        }
+      },
+      flash(t, dt) {
+        if (Math.random() < 0.1) {
+          particles.push(new Particle(
+            Math.random() * W, Math.random() * H * 0.5,
+            { vx: 0, vy: 0, size: 20 + Math.random() * 30,
+              color: 'rgba(255,255,255,0.8)', decay: 0.08, shape: 'circle' }
+          ));
+        }
+      },
+      lightning(t, dt) {
+        if (Math.random() < 0.2) {
+          const x = W * 0.3 + Math.random() * W * 0.4;
+          for (let i = 0; i < 5; i++) {
+            particles.push(new Particle(
+              x + (Math.random()-0.5) * 30, i * H/5,
+              { vx: (Math.random()-0.5)*8, vy: 3 + Math.random()*5,
+                size: 2 + Math.random()*4,
+                color: ['#00d2ff', '#7c6aef', '#fff', '#b388ff'][Math.floor(Math.random()*4)],
+                shape: 'line', decay: 0.05, life: 0.8 }
+            ));
+          }
+        }
+      },
+      speed(t, dt) {
+        if (Math.random() < 0.6) {
+          particles.push(new Particle(
+            W + 10, Math.random() * H,
+            { vx: -15 - Math.random() * 20, vy: 0, size: 1 + Math.random() * 2,
+              color: 'rgba(255,255,255,0.5)', shape: 'line', decay: 0.04, life: 0.7 }
+          ));
+        }
+      },
+      shield(t, dt) {
+        const angle = t * 3 + Math.random() * 0.5;
+        if (Math.random() < 0.3) {
+          particles.push(new Particle(
+            W/2 + Math.cos(angle) * 150, H/2 + Math.sin(angle) * 180,
+            { vx: 0, vy: 0, size: 5 + Math.random()*6,
+              color: ['#00d2ff', '#7c6aef', '#4fc3f7'][Math.floor(Math.random()*3)],
+              decay: 0.025, shape: 'star', spin: 0.05 }
+          ));
+        }
+      },
+      celebration(t, dt) {
+        if (Math.random() < 0.3) {
+          particles.push(new Particle(
+            Math.random() * W, H + 10,
+            { vx: (Math.random()-0.5) * 6, vy: -6 - Math.random() * 8,
+              size: 4 + Math.random()*6,
+              color: ['#ffd700', '#ff6b9d', '#7c6aef', '#2ecc71', '#00d2ff', '#fff'][Math.floor(Math.random()*6)],
+              shape: Math.random() > 0.5 ? 'star' : 'circle',
+              decay: 0.008, gravity: 0.08, spin: 0.1 }
+          ));
+        }
+      }
+    };
+
+    // Camera shake state
+    let shakeX = 0, shakeY = 0, shakeIntensity = 0;
+
+    function animate(timestamp) {
+      const t = (timestamp - startTime) / 1000; // seconds elapsed
+      const dt = 1/60;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Draw black bg
+      ctx.fillStyle = '#0a0a0f';
+      ctx.fillRect(0, 0, W, H);
+
+      // Camera shake for impact types
+      if (currentAction && ['impact','explosion','slash'].includes(currentAction.type)) {
+        shakeIntensity = Math.sin(t * 20) * Math.max(0, 1 - t * 0.3) * 6;
+      } else {
+        shakeIntensity *= 0.95;
+      }
+      shakeX = (Math.random() - 0.5) * shakeIntensity;
+      shakeY = (Math.random() - 0.5) * shakeIntensity;
+
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+
+      // Draw character image with dynamic effects
+      if (charImage && charImage.complete) {
+        ctx.save();
+
+        // Image motion based on action type
+        let imgScale = 1;
+        let imgX = 0, imgY = 0;
+        if (currentAction) {
+          const type = currentAction.type;
+          if (type === 'rhythm' || type === 'dance') {
+            imgX = Math.sin(t * 6) * 8;
+            imgY = Math.abs(Math.sin(t * 4)) * -10;
+            imgScale = 1 + Math.sin(t * 8) * 0.02;
+          } else if (type === 'hearts' || type === 'wink' || type === 'kiss') {
+            imgScale = 1 + Math.sin(t * 3) * 0.03;
+          } else if (type === 'wind' || type === 'turn') {
+            imgX = Math.sin(t * 2) * 15;
+          } else if (type === 'impact' || type === 'punch') {
+            imgX = Math.sin(t * 15) * 4 * Math.max(0, 1 - t * 0.3);
+          } else if (type === 'aura' || type === 'haki') {
+            imgScale = 1 + Math.sin(t * 4) * 0.04;
+          } else if (type === 'speed' || type === 'charge') {
+            imgX = -10 + Math.sin(t * 10) * 5;
+          } else if (type === 'explosion' || type === 'special') {
+            imgScale = 1 + Math.sin(t * 6) * 0.05;
+          }
+        }
+
+        // Draw the image to fill canvas
+        const imgRatio = charImage.naturalWidth / charImage.naturalHeight;
+        const canvasRatio = W / H;
+        let dw, dh, dx, dy;
+        if (imgRatio < canvasRatio) {
+          dw = W; dh = W / imgRatio;
+          dx = 0; dy = 0; // top-aligned
+        } else {
+          dh = H; dw = H * imgRatio;
+          dx = (W - dw) / 2; dy = 0;
+        }
+
+        ctx.translate(W/2 + imgX, H/2 + imgY);
+        ctx.scale(imgScale, imgScale);
+        ctx.translate(-W/2, -H/2);
+        ctx.drawImage(charImage, dx, dy, dw, dh);
+
+        // Color overlay / vignette based on action
+        if (currentAction) {
+          const type = currentAction.type;
+          if (['hearts','petals','blush','warmth','kiss','wink'].includes(type)) {
+            ctx.fillStyle = `rgba(255,80,120,${0.05 + Math.sin(t*2)*0.05})`;
+            ctx.fillRect(0, 0, W, H);
+          } else if (['aura','lightning','shield','focus'].includes(type)) {
+            ctx.fillStyle = `rgba(100,80,230,${0.05 + Math.sin(t*2)*0.05})`;
+            ctx.fillRect(0, 0, W, H);
+          } else if (['explosion','impact'].includes(type)) {
+            const flash = Math.max(0, Math.sin(t * 15) * 0.15);
+            ctx.fillStyle = `rgba(255,200,50,${flash})`;
+            ctx.fillRect(0, 0, W, H);
+          }
+        }
+
+        ctx.restore();
+      }
+
+      // Vignette always
+      const vg = ctx.createRadialGradient(W/2, H/2, W*0.3, W/2, H/2, W*0.8);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.6)');
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Generate new particles
+      if (currentAction && effects[currentAction.type]) {
+        effects[currentAction.type](t, dt);
+      }
+
+      // Update & draw particles
+      particles = particles.filter(p => p.life > 0);
+      for (const p of particles) {
+        p.update();
+        p.draw(ctx);
+      }
+
+      // Action text flash at start
+      if (currentAction && t < 1.5) {
+        const alpha = t < 0.3 ? t / 0.3 : t < 1 ? 1 : 1 - (t - 1) / 0.5;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, alpha) * 0.9;
+        ctx.font = 'bold 60px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = currentAction.type.includes('heart') || currentAction.type.includes('petal')
+          ? '#ff6b9d' : '#7c6aef';
+        ctx.shadowBlur = 30;
+        ctx.fillText(currentAction.label, W/2, H * 0.85);
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      // Continue if still playing
+      if (t < 5) {
+        animationId = requestAnimationFrame(animate);
+      }
+    }
+
+    function playAction(idx, btn) {
+      if (animationId) stopVideo();
+
+      const actions = character.gender === 'female' ? FEMALE_ACTIONS : MALE_ACTIONS;
+      currentAction = actions[idx];
+      activeBtn = btn;
+      btn.classList.add('playing');
+
+      document.getElementById('videoActionName').textContent = `${character.name} · ${currentAction.label}`;
+      document.getElementById('videoOverlay').classList.add('show');
+
+      particles = [];
+      shakeIntensity = 0;
+      startTime = performance.now();
+
+      // Start animation
+      animationId = requestAnimationFrame(animate);
+
+      // Timer bar
+      let elapsed = 0;
+      const fill = document.getElementById('videoTimerFill');
+      const timeEl = document.getElementById('videoTime');
+      fill.style.width = '0%';
+
+      countdownTimer = setInterval(() => {
+        elapsed += 50;
+        fill.style.width = (elapsed / 5000 * 100) + '%';
+        timeEl.textContent = Math.max(0, (5000 - elapsed) / 1000).toFixed(1);
+        if (elapsed >= 5000) stopVideo();
+      }, 50);
+    }
+
+    function stopVideo() {
+      if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      document.getElementById('videoOverlay').classList.remove('show');
+      if (activeBtn) { activeBtn.classList.remove('playing'); activeBtn = null; }
+      currentAction = null;
+      particles = [];
+    }
+
+    document.getElementById('videoOverlay').addEventListener('click', function(e) {
+      if (e.target === this) stopVideo();
+    });
+
+    init();
+  </script>
+</body>
+</html>
