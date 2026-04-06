@@ -64,11 +64,11 @@ function buildDelogoFilter(delogoStr, width, height) {
   try {
     const d = JSON.parse(delogoStr);
     if (d.preset === 'both-top') {
-      // Left watermark: ~14% width, ~12% height
-      const l = clampDelogo(0, 0, Math.round(width * 0.14), Math.round(height * 0.12), width, height);
-      // Right watermark: ~12% width, ~14% height (IPPA logo is taller)
-      const rw = Math.round(width * 0.12);
-      const rh = Math.round(height * 0.14);
+      // Left watermark: ~16% width, ~14% height
+      const l = clampDelogo(0, 0, Math.round(width * 0.16), Math.round(height * 0.14), width, height);
+      // Right watermark: ~16% width, ~16% height
+      const rw = Math.round(width * 0.16);
+      const rh = Math.round(height * 0.16);
       const r = clampDelogo(width - rw, 0, rw, rh, width, height);
       return `delogo=x=${l.x}:y=${l.y}:w=${l.w}:h=${l.h},delogo=x=${r.x}:y=${r.y}:w=${r.w}:h=${r.h}`;
     }
