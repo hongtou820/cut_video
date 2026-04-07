@@ -6,6 +6,142 @@ const { execFile } = require('child_process');
 const https = require('https');
 const http = require('http');
 
+const DETECT_SCRIPT = path.join(__dirname, 'detect_watermark.py');
+const PYTHON_BIN = process.platform === 'win32' ? 'python' : 'python3';
+
+// Runs the Python watermark detector for a single corner.
+// Returns detected { x, y, w, h } or null on failure (falls back to preset).
+function detectWatermarkCorner(videoInput, corner, width, height, callback) {
+  execFile(
+    PYTHON_BIN,
+    [DETECT_SCRIPT, videoInput, corner, String(width), String(height)],
+    { timeout: 60000 },
+    (err, stdout) => {
+      if (err) {
+        console.warn(`[Detect] Python error (${corner}):`, err.message);
+        return callback(null);
+      }
+      try {
+        const result = JSON.parse(stdout.trim());
+        if (result.error) {
+          console.warn(`[Detect] Detection failed (${corner}):`, result.error);
+          return callback(null);
+        }
+        console.log(`[Detect] Found watermark (${corner}):`, result);
+        callback(result);
+      } catch (_) {
+        callback(null);
+      }
+    }
+  );
+}
+
+// Preset fallback coords (percentage-based)
+// top-left is wider to cover multi-logo stacks like SOD + IPPA + No.XXXXXX
+function presetCoords(corner, width, height) {
+  switch (corner) {
+    case 'top-left':     return clampDelogo(0, 0, Math.round(width * 0.22), Math.round(height * 0.18), width, height);
+    case 'top-right':    return clampDelogo(width - Math.round(width * 0.16), 0, Math.round(width * 0.16), Math.round(height * 0.16), width, height);
+    case 'bottom-left':  return clampDelogo(0, height - Math.round(height * 0.16), Math.round(width * 0.16), Math.round(height * 0.16), width, height);
+    case 'bottom-right': return clampDelogo(width - Math.round(width * 0.16), height - Math.round(height * 0.16), Math.round(width * 0.16), Math.round(height * 0.16), width, height);
+    default: return null;
+  }
+}
+
+// Auto-detect watermarks in all 4 corners in parallel.
+// If detection finds watermarks → remove only those corners precisely.
+// If detection finds nothing → fall back to always removing both-top (safe default for JAV videos).
+// callback(filterString)
+function autoDetectAllCorners(videoInput, width, height, callback) {
+  const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+  const results = {};
+  let done = 0;
+
+  function coordsToFilter(coords) {
+    const c = clampDelogo(coords.x, coords.y, coords.w, coords.h, width, height);
+    return `delogo=x=${c.x}:y=${c.y}:w=${c.w}:h=${c.h}`;
+  }
+
+  function bothTopFallback() {
+    const l = presetCoords('top-left',  width, height);
+    const r = presetCoords('top-right', width, height);
+    console.log('[Detect] Nothing detected — falling back to both-top preset');
+    return `${coordsToFilter(l)},${coordsToFilter(r)}`;
+  }
+
+  // top-left and top-right always get delogoed (preset if not detected)
+  // bottom corners only removed if actually detected
+  const alwaysCorners = ['top-left', 'top-right'];
+  const optionalCorners = ['bottom-left', 'bottom-right'];
+
+  corners.forEach((corner) => {
+    detectWatermarkCorner(videoInput, corner, width, height, (detected) => {
+      results[corner] = detected; // null if not detected
+      if (++done === corners.length) {
+        const filters = [];
+
+        alwaysCorners.forEach((c) => {
+          const coords = results[c] || presetCoords(c, width, height);
+          filters.push(coordsToFilter(coords));
+          console.log(`[Detect] ${c}: ${results[c] ? 'precise coords' : 'preset fallback'}`);
+        });
+
+        optionalCorners.forEach((c) => {
+          if (results[c]) {
+            filters.push(coordsToFilter(results[c]));
+            console.log(`[Detect] ${c}: detected, removing`);
+          }
+        });
+
+        callback(filters.join(','));
+      }
+    });
+  });
+}
+
+// Resolves delogo filter string.
+// - No delogo param → auto-detect all 4 corners
+// - preset → auto-detect that specific corner(s), fallback to preset size if detection fails
+// - custom coords → use as-is
+function resolveDelogoFilter(delogoStr, videoInput, width, height, callback) {
+  function coordsToFilter(coords) {
+    const c = clampDelogo(coords.x, coords.y, coords.w, coords.h, width, height);
+    return `delogo=x=${c.x}:y=${c.y}:w=${c.w}:h=${c.h}`;
+  }
+
+  // No param = fully automatic
+  if (!delogoStr) {
+    return autoDetectAllCorners(videoInput, width, height, callback);
+  }
+
+  let d;
+  try { d = JSON.parse(delogoStr); } catch (_) { return autoDetectAllCorners(videoInput, width, height, callback); }
+
+  if (d.preset === 'both-top') {
+    let done = 0;
+    let leftCoords = null;
+    let rightCoords = null;
+    function finish() {
+      if (++done < 2) return;
+      const l = leftCoords  || presetCoords('top-left',  width, height);
+      const r = rightCoords || presetCoords('top-right', width, height);
+      callback(`${coordsToFilter(l)},${coordsToFilter(r)}`);
+    }
+    detectWatermarkCorner(videoInput, 'top-left',  width, height, (c) => { leftCoords  = c; finish(); });
+    detectWatermarkCorner(videoInput, 'top-right', width, height, (c) => { rightCoords = c; finish(); });
+
+  } else if (d.preset && d.preset !== 'custom') {
+    detectWatermarkCorner(videoInput, d.preset, width, height, (detected) => {
+      const coords = detected || presetCoords(d.preset, width, height);
+      callback(coords ? coordsToFilter(coords) : '');
+    });
+
+  } else {
+    // Custom coords — use as-is, no detection
+    callback(buildDelogoFilter(delogoStr, width, height));
+  }
+}
+
 const router = express.Router();
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -97,17 +233,8 @@ function buildDelogoFilter(delogoStr, width, height) {
 }
 
 function buildLogoFilter(logoScale) {
-  // Scale logo and apply rounded corners using geq alpha mask
-  // CR = corner radius (~15% of logo size)
-  // All commas escaped as \, for filter_complex context
-  const cr = Math.round(logoScale * 0.15);
-  const geq = [
-    `r=r(X\\,Y)`,
-    `g=g(X\\,Y)`,
-    `b=b(X\\,Y)`,
-    `a=if(gt(abs(X-W/2)\\,W/2-${cr})*gt(abs(Y-H/2)\\,H/2-${cr})\\,if(lte(hypot(abs(X-W/2)-(W/2-${cr})\\,abs(Y-H/2)-(H/2-${cr}))\\,${cr})\\,alpha(X\\,Y)\\,0)\\,alpha(X\\,Y))`,
-  ].join(':');
-  return `[1:v]scale=${logoScale}:-1,format=rgba,geq=${geq}[logo]`;
+  // Logo PNG is already RGBA with transparency — just scale and use directly
+  return `[1:v]scale=${logoScale}:-1,format=rgba[logo]`;
 }
 
 function probeResolution(inputPath, callback) {
@@ -165,37 +292,37 @@ router.post('/api/burn-subtitle', upload.fields([
   const subPath = escapeSubPath(subtitleFile.path);
 
   probeResolution(videoFile.path, (width, height) => {
-    const delogoFilter = buildDelogoFilter(delogo, width, height);
-    const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
-    // Logo: scale to ~6% of video width, overlay top-right with 10px margin
-    const logoScale = Math.round(width * 0.06);
-    const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
-    const fc = `${baseFilter},${subFilter}[v]`;
+    resolveDelogoFilter(delogo, videoFile.path, width, height, (delogoFilter) => {
+      const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
+      const logoScale = Math.round(width * 0.06);
+      const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
+      const fc = `${baseFilter},${subFilter}[v]`;
 
-    const args = [
-      '-y',
-      '-i', videoFile.path,
-      '-i', LOGO_PATH,
-      '-ss', start,
-      '-to', end,
-      '-filter_complex', fc,
-      '-map', '[v]', '-map', '0:a',
-      outputPath,
-    ];
+      const args = [
+        '-y',
+        '-i', videoFile.path,
+        '-i', LOGO_PATH,
+        '-ss', start,
+        '-to', end,
+        '-filter_complex', fc,
+        '-map', '[v]', '-map', '0:a',
+        outputPath,
+      ];
 
-    console.log('[Subtitle] Processing:', { start, end, delogo: !!delogoFilter, video: videoFile.originalname, subtitle: subtitleFile.originalname });
+      console.log('[Subtitle] Processing:', { start, end, delogo: !!delogoFilter, video: videoFile.originalname, subtitle: subtitleFile.originalname });
 
-    execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
-      try { fs.unlinkSync(videoFile.path); } catch (_) {}
-      try { fs.unlinkSync(subtitleFile.path); } catch (_) {}
+      execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+        try { fs.unlinkSync(videoFile.path); } catch (_) {}
+        try { fs.unlinkSync(subtitleFile.path); } catch (_) {}
 
-      if (err) {
-        console.error('[Subtitle] FFmpeg error:', stderr || err.message);
-        return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
-      }
+        if (err) {
+          console.error('[Subtitle] FFmpeg error:', stderr || err.message);
+          return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
+        }
 
-      saveMeta(outputName, { start, end, video: videoFile.originalname, subtitle: subtitleFile.originalname, language: language || '' });
-      res.json({ ok: true, url: `/subtitle/output/${outputName}`, filename: outputName });
+        saveMeta(outputName, { start, end, video: videoFile.originalname, subtitle: subtitleFile.originalname, language: language || '' });
+        res.json({ ok: true, url: `/subtitle/output/${outputName}`, filename: outputName });
+      });
     });
   });
 });
@@ -221,35 +348,36 @@ router.post('/api/burn-subtitle-url', upload.fields([
     const subPath = escapeSubPath(subFilePath);
 
     probeResolution(videoUrl, (width, height) => {
-      const delogoFilter = buildDelogoFilter(delogo, width, height);
-      const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
-      const logoScale = Math.round(width * 0.06);
-      const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
-      const fc = `${baseFilter},${subFilter}[v]`;
+      resolveDelogoFilter(delogo, videoUrl, width, height, (delogoFilter) => {
+        const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
+        const logoScale = Math.round(width * 0.06);
+        const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
+        const fc = `${baseFilter},${subFilter}[v]`;
 
-      const args = [
-        '-y',
-        '-i', videoUrl,
-        '-i', LOGO_PATH,
-        '-ss', start,
-        '-to', end,
-        '-filter_complex', fc,
-        '-map', '[v]', '-map', '0:a',
-        outputPath,
-      ];
+        const args = [
+          '-y',
+          '-i', videoUrl,
+          '-i', LOGO_PATH,
+          '-ss', start,
+          '-to', end,
+          '-filter_complex', fc,
+          '-map', '[v]', '-map', '0:a',
+          outputPath,
+        ];
 
-      console.log('[Subtitle-URL] Processing:', { start, end, delogo: !!delogoFilter, videoUrl, subtitleUrl: subtitleUrl || 'file' });
+        console.log('[Subtitle-URL] Processing:', { start, end, delogo: !!delogoFilter, videoUrl, subtitleUrl: subtitleUrl || 'file' });
 
-      execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
-        try { fs.unlinkSync(subFilePath); } catch (_) {}
+        execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+          try { fs.unlinkSync(subFilePath); } catch (_) {}
 
-        if (err) {
-          console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
-          return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
-        }
+          if (err) {
+            console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
+            return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
+          }
 
-        saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
-        res.json({ ok: true, url: `/subtitle/output/${outputName}`, filename: outputName });
+          saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
+          res.json({ ok: true, url: `/subtitle/output/${outputName}`, filename: outputName });
+        });
       });
     });
   }
