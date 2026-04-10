@@ -146,7 +146,7 @@ const router = express.Router();
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const OUTPUT_DIR = path.join(__dirname, 'output');
-const LOGO_PATH = path.join(__dirname, 'AIJAV LOGO_SQUARE_BLACK.png');
+const LOGO_PATH = path.join(__dirname, 'AI JAV_logotype_white.png');
 const DB_PATH = path.join(__dirname, 'db.json');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -237,6 +237,16 @@ function buildLogoFilter(logoScale) {
   return `[1:v]scale=${logoScale}:-1,format=rgba[logo]`;
 }
 
+// Bouncing overlay expression (DVD screensaver style)
+// Logo bounces off all 4 edges using time t
+function buildBounceOverlay() {
+  const speedX = 80;  // pixels per second horizontal
+  const speedY = 60;  // pixels per second vertical
+  const x = `abs(mod(t*${speedX}\\,2*(W-w))-(W-w))`;
+  const y = `abs(mod(t*${speedY}\\,2*(H-h))-(H-h))`;
+  return `overlay=x='${x}':y='${y}'`;
+}
+
 function probeResolution(inputPath, callback) {
   execFile('ffprobe', [
     '-v', 'error',
@@ -295,7 +305,8 @@ router.post('/api/burn-subtitle', upload.fields([
     resolveDelogoFilter(delogo, videoFile.path, width, height, (delogoFilter) => {
       const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
       const logoScale = Math.round(width * 0.06);
-      const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
+      const bounce = buildBounceOverlay();
+      const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
       const fc = `${baseFilter},${subFilter}[v]`;
 
       const args = [
@@ -351,7 +362,8 @@ router.post('/api/burn-subtitle-url', upload.fields([
       resolveDelogoFilter(delogo, videoUrl, width, height, (delogoFilter) => {
         const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
         const logoScale = Math.round(width * 0.06);
-        const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]overlay=W-w-10:10` : `${buildLogoFilter(logoScale)};[0:v][logo]overlay=W-w-10:10`;
+        const bounce = buildBounceOverlay();
+        const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
         const fc = `${baseFilter},${subFilter}[v]`;
 
         const args = [
