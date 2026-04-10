@@ -250,11 +250,13 @@ function buildBounceOverlay() {
 function probeResolution(inputPath, callback) {
   execFile('ffprobe', [
     '-v', 'error',
+    '-analyzeduration', '20000000',  // 20 seconds — gives slow HTTP streams time to buffer
+    '-probesize', '20000000',        // 20MB — enough to find codec params in remote streams
     '-select_streams', 'v:0',
     '-show_entries', 'stream=width,height',
     '-of', 'csv=p=0',
     inputPath,
-  ], { timeout: 30000 }, (err, stdout) => {
+  ], { timeout: 60000 }, (err, stdout) => {
     if (err || !stdout.trim()) return callback(1280, 720);
     const [w, h] = stdout.trim().split(',').map(Number);
     callback(w || 1280, h || 720);
