@@ -233,8 +233,8 @@ function buildDelogoFilter(delogoStr, width, height) {
 }
 
 function buildLogoFilter(logoScale) {
-  // Logo PNG is already RGBA with transparency — just scale and use directly
-  return `[1:v]scale=${logoScale}:-1,format=rgba[logo]`;
+  // Scale logo and set 30% opacity (alpha = 0.3)
+  return `[1:v]scale=${logoScale}:-1,format=rgba,colorchannelmixer=aa=0.3[logo]`;
 }
 
 // Bouncing overlay expression (DVD screensaver style)
