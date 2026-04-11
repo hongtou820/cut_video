@@ -346,6 +346,7 @@ router.post('/api/burn-subtitle', upload.fields([
         '-to', end,
         '-filter_complex', fc,
         '-map', '[v]', '-map', '0:a',
+        '-pix_fmt', 'yuv420p',
         outputPath,
       ];
 
@@ -410,6 +411,7 @@ router.post('/api/burn-subtitle-url', upload.fields([
           '-t', calcDuration(start, end),
           '-filter_complex', fc,
           '-map', '[v]', '-map', '0:a',
+          '-pix_fmt', 'yuv420p',
           outputPath,
         ] : [
           '-y',
@@ -419,6 +421,7 @@ router.post('/api/burn-subtitle-url', upload.fields([
           '-to', end,
           '-filter_complex', fc,
           '-map', '[v]', '-map', '0:a',
+          '-pix_fmt', 'yuv420p',
           outputPath,
         ];
 
