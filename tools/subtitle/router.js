@@ -151,6 +151,9 @@ const DB_PATH = path.join(__dirname, 'db.json');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+// In-memory job store: jobId -> { status, url, filename, error, created }
+const jobs = new Map();
+
 // Simple JSON DB for metadata
 function loadDB() {
   try { return JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch (_) { return {}; }
@@ -178,6 +181,14 @@ const upload = multer({
 function timeToSec(t) {
   const parts = t.split(':').map(Number);
   return parts[0] * 3600 + parts[1] * 60 + (parts[2] || 0);
+}
+
+function calcDuration(start, end) {
+  const secs = timeToSec(end) - timeToSec(start);
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
 function escapeSubPath(p) {
@@ -249,17 +260,33 @@ function buildBounceOverlay() {
 
 function probeResolution(inputPath, callback) {
   execFile('ffprobe', [
-    '-v', 'error',
-    '-analyzeduration', '20000000',  // 20 seconds — gives slow HTTP streams time to buffer
-    '-probesize', '20000000',        // 20MB — enough to find codec params in remote streams
+    '-v', 'warning',
+    '-analyzeduration', '20000000',
+    '-probesize', '20000000',
     '-select_streams', 'v:0',
     '-show_entries', 'stream=width,height',
     '-of', 'csv=p=0',
     inputPath,
-  ], { timeout: 60000 }, (err, stdout) => {
-    if (err || !stdout.trim()) return callback(1280, 720);
-    const [w, h] = stdout.trim().split(',').map(Number);
-    callback(w || 1280, h || 720);
+  ], { timeout: 60000 }, (_err, stdout, stderr) => {
+    // Always try to parse stdout first — ffprobe may output resolution even on non-zero exit
+    const line = (stdout || '').trim();
+    if (line) {
+      const [w, h] = line.split(',').map(Number);
+      if (w && h) {
+        console.log(`[Probe] Detected resolution: ${w}x${h}`);
+        return callback(w, h);
+      }
+    }
+    // Fallback: parse from stderr (ffprobe prints stream info there)
+    const match = (stderr || '').match(/(\d{3,4})x(\d{3,4})/);
+    if (match) {
+      const w = parseInt(match[1]);
+      const h = parseInt(match[2]);
+      console.log(`[Probe] Resolution from stderr fallback: ${w}x${h}`);
+      return callback(w, h);
+    }
+    console.warn('[Probe] Could not detect resolution, using 1280x720 fallback');
+    callback(1280, 720);
   });
 }
 
@@ -357,20 +384,36 @@ router.post('/api/burn-subtitle-url', upload.fields([
   const outputName = `output_${Date.now()}.mp4`;
   const outputPath = path.join(OUTPUT_DIR, outputName);
 
-  function processWithSubtitle(subFilePath) {
+  function processWithVideo(videoInput, subFilePath, cleanupVideo) {
     const subPath = escapeSubPath(subFilePath);
 
-    probeResolution(videoUrl, (width, height) => {
-      resolveDelogoFilter(delogo, videoUrl, width, height, (delogoFilter) => {
+    // Use URL directly with input seeking — ffmpeg only downloads the requested segment
+    const isUrl = videoInput.startsWith('http://') || videoInput.startsWith('https://');
+
+    probeResolution(videoInput, (width, height) => {
+      resolveDelogoFilter(delogo, videoInput, width, height, (delogoFilter) => {
         const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
         const logoScale = Math.round(width * 0.06);
         const bounce = buildBounceOverlay();
         const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
         const fc = `${baseFilter},${subFilter}[v]`;
 
-        const args = [
+        // For URLs: -ss before -i = input seeking (HTTP range, only downloads the segment)
+        // For local files: -ss after -i is fine
+        const args = isUrl ? [
           '-y',
-          '-i', videoUrl,
+          '-ss', start,
+          '-analyzeduration', '20000000',
+          '-probesize', '20000000',
+          '-i', videoInput,
+          '-i', LOGO_PATH,
+          '-t', calcDuration(start, end),
+          '-filter_complex', fc,
+          '-map', '[v]', '-map', '0:a',
+          outputPath,
+        ] : [
+          '-y',
+          '-i', videoInput,
           '-i', LOGO_PATH,
           '-ss', start,
           '-to', end,
@@ -383,34 +426,56 @@ router.post('/api/burn-subtitle-url', upload.fields([
 
         execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
           try { fs.unlinkSync(subFilePath); } catch (_) {}
+          if (cleanupVideo) { try { fs.unlinkSync(videoInput); } catch (_) {} }
 
           if (err) {
             console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
-            return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
+            jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message), created: Date.now() });
+            return;
           }
 
           saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
-          res.json({ ok: true, url: `/subtitle/output/${outputName}`, filename: outputName });
+          jobs.set(jobId, { status: 'done', url: `/subtitle/output/${outputName}`, filename: outputName, created: Date.now() });
+          console.log('[Subtitle-URL] Job done:', jobId);
         });
       });
     });
   }
 
+  // Return job ID immediately — process in background
+  const jobId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  jobs.set(jobId, { status: 'pending', created: Date.now() });
+  res.json({ ok: true, jobId });
+
+  function processWithSubtitle(subFilePath) {
+    // Pass URL directly — ffmpeg uses input seeking to only download the requested segment
+    jobs.set(jobId, { status: 'processing', created: Date.now() });
+    console.log('[Subtitle-URL] Processing via input seeking (no full download):', videoUrl);
+    processWithVideo(videoUrl, subFilePath, false);
+  }
+
   if (subtitleFile) {
     processWithSubtitle(subtitleFile.path);
   } else {
-    // Download subtitle from URL
     const ext = path.extname(new URL(subtitleUrl).pathname) || '.srt';
     const subDest = path.join(UPLOAD_DIR, `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
     console.log('[Subtitle-URL] Downloading subtitle from:', subtitleUrl);
     downloadFile(subtitleUrl, subDest, (err) => {
       if (err) {
         console.error('[Subtitle-URL] Subtitle download error:', err.message);
-        return res.status(400).json({ error: '字幕下载失败: ' + err.message });
+        jobs.set(jobId, { status: 'error', error: '字幕下载失败: ' + err.message, created: Date.now() });
+        return;
       }
       processWithSubtitle(subDest);
     });
   }
+});
+
+// Job status endpoint
+router.get('/api/job/:jobId', (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(job);
 });
 
 // List generated files (history)
