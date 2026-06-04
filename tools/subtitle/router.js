@@ -243,31 +243,19 @@ function buildDelogoFilter(delogoStr, width, height) {
   }
 }
 
+// Logo filter: loop PNG indefinitely so T increments, then geq controls alpha
+// visible 1s every 5s via lt(mod(T,5),1)
 function buildLogoFilter(logoScale) {
-  return `[1:v]scale=${logoScale}:-1,format=rgba,colorchannelmixer=aa=0.3[logo]`;
+  return `[1:v]loop=loop=-1:size=1:start=0,scale=${logoScale}:-1,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*0.3*lt(mod(T,5),1)'[logo]`;
 }
 
-// Flash overlay: logo keeps bouncing (DVD style) but flashes — visible 1s, hidden 3-6s randomly
-function buildFlashOverlay(durationSecs) {
+// Bouncing overlay (DVD screensaver style) — no enable needed, alpha controlled in logo filter
+function buildBounceOverlay() {
   const speedX = 80;
   const speedY = 60;
   const x = `abs(mod(t*${speedX}\\,2*(W-w))-(W-w))`;
   const y = `abs(mod(t*${speedY}\\,2*(H-h))-(H-h))`;
-
-  const flashes = [];
-  let t = 1 + Math.random() * 2;
-  while (t + 1 < durationSecs) {
-    flashes.push({ start: parseFloat(t.toFixed(2)), end: parseFloat((t + 1).toFixed(2)) });
-    t += 1 + 3 + Math.random() * 3; // show 1s + gap 3-6s
-  }
-
-  if (flashes.length === 0) {
-    const mid = parseFloat((durationSecs / 2).toFixed(2));
-    flashes.push({ start: mid, end: parseFloat((mid + 1).toFixed(2)) });
-  }
-
-  const enableExpr = flashes.map(f => `between(t\\,${f.start}\\,${f.end})`).join('+');
-  return `overlay=x='${x}':y='${y}':enable='${enableExpr}'`;
+  return `overlay=x='${x}':y='${y}'`;
 }
 
 function probeResolution(inputPath, callback) {
@@ -346,8 +334,8 @@ router.post('/api/burn-subtitle', upload.fields([
     resolveDelogoFilter(delogo, videoFile.path, width, height, (delogoFilter) => {
       const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
       const logoScale = Math.round(width * 0.06);
-      const flashOverlay = buildFlashOverlay(timeToSec(end) - timeToSec(start));
-      const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${flashOverlay}` : `${buildLogoFilter(logoScale)};[0:v][logo]${flashOverlay}`;
+      const bounce = buildBounceOverlay();
+      const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
       const fc = `${baseFilter},${subFilter}[v]`;
 
       const args = [
@@ -407,8 +395,8 @@ router.post('/api/burn-subtitle-url', upload.fields([
       resolveDelogoFilter(delogo, videoInput, width, height, (delogoFilter) => {
         const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
         const logoScale = Math.round(width * 0.06);
-        const flashOverlay = buildFlashOverlay(timeToSec(end) - timeToSec(start));
-        const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${flashOverlay}` : `${buildLogoFilter(logoScale)};[0:v][logo]${flashOverlay}`;
+        const bounce = buildBounceOverlay();
+        const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
         const fc = `${baseFilter},${subFilter}[v]`;
 
         // For URLs: -ss before -i = input seeking (HTTP range, only downloads the segment)
