@@ -467,8 +467,14 @@ router.post('/api/burn-subtitle-url', upload.fields([
     };
 
     if (isUrl) {
-      // Pre-check the URL before handing to FFmpeg — fail fast on server errors
+      // Pre-check the URL before handing to FFmpeg — fail fast on server errors or timeout
       checkUrlStatus(videoInput).then((status) => {
+        if (status === 0) {
+          console.error('[Subtitle-URL] URL pre-check timed out / unreachable:', videoInput);
+          cleanup();
+          jobs.set(jobId, { status: 'error', error: '视频源服务器无响应，请稍后重试', created: Date.now() });
+          return;
+        }
         if (status >= 400) {
           console.error('[Subtitle-URL] URL pre-check failed, status:', status, videoInput);
           cleanup();
