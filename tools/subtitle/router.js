@@ -6,6 +6,20 @@ const { execFile } = require('child_process');
 const https = require('https');
 const http = require('http');
 
+// Quick HEAD check — resolves with HTTP status code, or 0 on network error
+function checkUrlStatus(url, timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    const mod = url.startsWith('https') ? https : http;
+    const req = mod.request(url, { method: 'HEAD', timeout: timeoutMs }, (res) => {
+      res.resume();
+      resolve(res.statusCode);
+    });
+    req.on('timeout', () => { req.destroy(); resolve(0); });
+    req.on('error', () => resolve(0));
+    req.end();
+  });
+}
+
 const DETECT_SCRIPT = path.join(__dirname, 'detect_watermark.py');
 const PYTHON_BIN = process.platform === 'win32' ? 'python' : 'python3';
 
@@ -392,82 +406,80 @@ router.post('/api/burn-subtitle-url', upload.fields([
 
     const isUrl = videoInput.startsWith('http://') || videoInput.startsWith('https://');
 
-    probeResolution(videoInput, (width, height) => {
-      resolveDelogoFilter(delogo, videoInput, width, height, (delogoFilter) => {
-        const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
-        const logoScale = Math.round(width * 0.06);
-        const bounce = buildBounceOverlay();
-        const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
-        const fc = `${baseFilter},${subFilter}[v]`;
+    const cleanup = () => {
+      try { fs.unlinkSync(subFilePath); } catch (_) {}
+      if (cleanupVideo) { try { fs.unlinkSync(videoInput); } catch (_) {} }
+    };
 
-        // Input-seeking args (URL only): -ss before -i sends HTTP Range request — fast but
-        // fails with 504 if the upstream proxy can't handle Range. Falls back to output seek.
-        const inputSeekArgs = [
-          '-y',
-          '-ss', start,
-          '-analyzeduration', '20000000',
-          '-probesize', '20000000',
-          '-i', videoInput,
-          '-i', LOGO_PATH,
-          '-t', calcDuration(start, end),
-          '-filter_complex', fc,
-          '-map', '[v]', '-map', '0:a',
-          '-pix_fmt', 'yuv420p',
-          outputPath,
-        ];
+    const finish = (err, stderr) => {
+      cleanup();
+      if (err) {
+        console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
+        jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message), created: Date.now() });
+        return;
+      }
+      saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
+      jobs.set(jobId, { status: 'done', url: `/subtitle/output/${outputName}`, filename: outputName, created: Date.now() });
+      console.log('[Subtitle-URL] Job done:', jobId);
+    };
 
-        // Output-seeking args: -ss after -i — downloads from start of file but always works
-        const outputSeekArgs = [
-          '-y',
-          '-i', videoInput,
-          '-i', LOGO_PATH,
-          '-ss', start,
-          '-to', end,
-          '-filter_complex', fc,
-          '-map', '[v]', '-map', '0:a',
-          '-pix_fmt', 'yuv420p',
-          outputPath,
-        ];
+    const run = () => {
+      probeResolution(videoInput, (width, height) => {
+        resolveDelogoFilter(delogo, videoInput, width, height, (delogoFilter) => {
+          const subFilter = `subtitles='${subPath}':force_style='FontName=Noto Sans,FontSize=24'`;
+          const logoScale = Math.round(width * 0.06);
+          const bounce = buildBounceOverlay();
+          const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
+          const fc = `${baseFilter},${subFilter}[v]`;
 
-        const cleanup = () => {
-          try { fs.unlinkSync(subFilePath); } catch (_) {}
-          if (cleanupVideo) { try { fs.unlinkSync(videoInput); } catch (_) {} }
-        };
+          // URLs: input-seeking (-ss before -i) sends HTTP Range → only downloads the clip segment
+          // Local files: output-seeking (-ss after -i)
+          const args = isUrl ? [
+            '-y',
+            '-ss', start,
+            '-analyzeduration', '20000000',
+            '-probesize', '20000000',
+            '-i', videoInput,
+            '-i', LOGO_PATH,
+            '-t', calcDuration(start, end),
+            '-filter_complex', fc,
+            '-map', '[v]', '-map', '0:a',
+            '-pix_fmt', 'yuv420p',
+            outputPath,
+          ] : [
+            '-y',
+            '-i', videoInput,
+            '-i', LOGO_PATH,
+            '-ss', start,
+            '-to', end,
+            '-filter_complex', fc,
+            '-map', '[v]', '-map', '0:a',
+            '-pix_fmt', 'yuv420p',
+            outputPath,
+          ];
 
-        const finish = (err, stderr) => {
-          cleanup();
-          if (err) {
-            console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
-            jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message), created: Date.now() });
-            return;
-          }
-          saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
-          jobs.set(jobId, { status: 'done', url: `/subtitle/output/${outputName}`, filename: outputName, created: Date.now() });
-          console.log('[Subtitle-URL] Job done:', jobId);
-        };
-
-        const runOutputSeek = () => {
-          console.log('[Subtitle-URL] Retrying with output seeking (no Range request):', videoInput);
-          jobs.set(jobId, { status: 'processing', created: Date.now() });
-          execFile('ffmpeg', outputSeekArgs, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, _out, stderr) => {
+          console.log('[Subtitle-URL] Processing:', { start, end, seek: isUrl ? 'input' : 'output', delogo: !!delogoFilter });
+          execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, _out, stderr) => {
             finish(err, stderr);
           });
-        };
-
-        const firstArgs = isUrl ? inputSeekArgs : outputSeekArgs;
-        console.log('[Subtitle-URL] Processing:', { start, end, seek: isUrl ? 'input' : 'output', delogo: !!delogoFilter });
-
-        execFile('ffmpeg', firstArgs, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, _out, stderr) => {
-          if (err && isUrl && stderr && /Server returned 5XX|HTTP error [45]\d\d/i.test(stderr)) {
-            // Proxy rejected the Range request — retry without input seeking
-            console.warn('[Subtitle-URL] Input seeking got HTTP error, falling back to output seeking');
-            runOutputSeek();
-            return;
-          }
-          finish(err, stderr);
         });
       });
-    });
+    };
+
+    if (isUrl) {
+      // Pre-check the URL before handing to FFmpeg — fail fast on server errors
+      checkUrlStatus(videoInput).then((status) => {
+        if (status >= 400) {
+          console.error('[Subtitle-URL] URL pre-check failed, status:', status, videoInput);
+          cleanup();
+          jobs.set(jobId, { status: 'error', error: `视频源服务器暂时不可用 (HTTP ${status})，请稍后重试`, created: Date.now() });
+          return;
+        }
+        run();
+      });
+    } else {
+      run();
+    }
   }
 
   // Return job ID immediately — process in background
