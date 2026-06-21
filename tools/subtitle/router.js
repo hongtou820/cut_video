@@ -520,7 +520,7 @@ router.post('/api/burn-subtitle-url', upload.fields([
 // Job status endpoint
 router.get('/api/job/:jobId', (req, res) => {
   const job = jobs.get(req.params.jobId);
-  if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (!job) return res.status(404).json({ status: 'error', error: 'Job not found (server restarted, please try again)' });
   res.json(job);
 });
 
