@@ -185,6 +185,24 @@ const DB_PATH = path.join(__dirname, 'db.json');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+// Auto-delete output files older than 24h to prevent disk full
+function cleanOldOutputs() {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  let removed = 0;
+  try {
+    for (const f of fs.readdirSync(OUTPUT_DIR)) {
+      if (!f.endsWith('.mp4')) continue;
+      const fp = path.join(OUTPUT_DIR, f);
+      try {
+        if (fs.statSync(fp).mtimeMs < cutoff) { fs.unlinkSync(fp); removed++; }
+      } catch (_) {}
+    }
+    if (removed) console.log(`[cleanup] removed ${removed} old output file(s)`);
+  } catch (_) {}
+}
+cleanOldOutputs();
+setInterval(cleanOldOutputs, 60 * 60 * 1000); // run every hour
+
 // In-memory job store: jobId -> { status, url, filename, error, created }
 const jobs = new Map();
 
