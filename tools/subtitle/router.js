@@ -21,7 +21,7 @@ function checkUrlStatus(url, timeoutMs = 8000) {
   });
 }
 
-// Extract the real error lines from FFmpeg stderr, skipping the version/build banner
+// Extract the real error lines from FFmpeg stderr, skipping banner and progress lines
 function extractFfmpegError(stderr) {
   if (!stderr) return null;
   const meaningful = stderr.split('\n').filter(line => {
@@ -32,7 +32,10 @@ function extractFfmpegError(stderr) {
       !l.startsWith('configuration:') &&
       !l.match(/^lib(av|sw|post)/) &&
       !l.startsWith('Copyright') &&
-      !l.startsWith('--');
+      !l.startsWith('--') &&
+      !l.match(/^frame=\s*\d+/) &&   // skip progress lines
+      !l.match(/^\s*$/) &&
+      !l.match(/^Press \[q\]/);
   });
   return meaningful.slice(-5).join(' | ') || null;
 }
@@ -432,8 +435,10 @@ router.post('/api/burn-subtitle-url', upload.fields([
     const finish = (err, stderr) => {
       cleanup();
       if (err) {
-        console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
-        jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + (extractFfmpegError(stderr) || err.message.split('\n')[0]), created: Date.now() });
+        const realError = extractFfmpegError(stderr) || err.message.split('\n')[0];
+        console.error('[Subtitle-URL] FFmpeg FAILED. Real error:', realError);
+        console.error('[Subtitle-URL] Full stderr tail:\n' + (stderr || '').split('\n').slice(-20).join('\n'));
+        jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + realError, created: Date.now() });
         return;
       }
       saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
