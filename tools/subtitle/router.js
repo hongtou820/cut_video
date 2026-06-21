@@ -6,18 +6,35 @@ const { execFile } = require('child_process');
 const https = require('https');
 const http = require('http');
 
-// Quick HEAD check — resolves with HTTP status code, or 0 on network error
+// Range-request check — uses GET bytes=0-1023 so we test actual streaming, not just HEAD
 function checkUrlStatus(url, timeoutMs = 8000) {
   return new Promise((resolve) => {
     const mod = url.startsWith('https') ? https : http;
-    const req = mod.request(url, { method: 'HEAD', timeout: timeoutMs }, (res) => {
-      res.resume();
+    const req = mod.request(url, { method: 'GET', headers: { Range: 'bytes=0-1023' }, timeout: timeoutMs }, (res) => {
+      res.resume(); // discard body
+      // 200 or 206 = OK, anything else = problem
       resolve(res.statusCode);
     });
     req.on('timeout', () => { req.destroy(); resolve(0); });
     req.on('error', () => resolve(0));
     req.end();
   });
+}
+
+// Extract the real error lines from FFmpeg stderr, skipping the version/build banner
+function extractFfmpegError(stderr) {
+  if (!stderr) return null;
+  const meaningful = stderr.split('\n').filter(line => {
+    const l = line.trim();
+    return l &&
+      !l.startsWith('ffmpeg version') &&
+      !l.startsWith('built with') &&
+      !l.startsWith('configuration:') &&
+      !l.match(/^lib(av|sw|post)/) &&
+      !l.startsWith('Copyright') &&
+      !l.startsWith('--');
+  });
+  return meaningful.slice(-5).join(' | ') || null;
 }
 
 const DETECT_SCRIPT = path.join(__dirname, 'detect_watermark.py');
@@ -375,7 +392,7 @@ router.post('/api/burn-subtitle', upload.fields([
 
         if (err) {
           console.error('[Subtitle] FFmpeg error:', stderr || err.message);
-          return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message) });
+          return res.status(500).json({ error: 'FFmpeg 处理失败: ' + (extractFfmpegError(stderr) || err.message.split('\n')[0]) });
         }
 
         saveMeta(outputName, { start, end, video: videoFile.originalname, subtitle: subtitleFile.originalname, language: language || '' });
@@ -416,7 +433,7 @@ router.post('/api/burn-subtitle-url', upload.fields([
       cleanup();
       if (err) {
         console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
-        jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message), created: Date.now() });
+        jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + (extractFfmpegError(stderr) || err.message.split('\n')[0]), created: Date.now() });
         return;
       }
       saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
