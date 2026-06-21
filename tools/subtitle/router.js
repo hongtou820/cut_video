@@ -304,29 +304,30 @@ function probeResolution(inputPath, callback) {
   });
 }
 
-function downloadFile(url, dest, callback) {
+function downloadFile(url, dest, callback, timeoutMs = 20000) {
   const mod = url.startsWith('https') ? https : http;
   const file = fs.createWriteStream(dest);
   let called = false;
-  const done = (err) => { if (called) return; called = true; callback(err); };
-  mod.get(url, (res) => {
+  const done = (err) => {
+    if (called) return; called = true;
+    try { file.close(); } catch (_) {}
+    if (err) { try { fs.unlinkSync(dest); } catch (_) {} }
+    callback(err);
+  };
+  const req = mod.get(url, (res) => {
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-      file.close();
-      fs.unlinkSync(dest);
-      return downloadFile(res.headers.location, dest, callback);
+      res.resume();
+      return downloadFile(res.headers.location, dest, callback, timeoutMs);
     }
     if (res.statusCode !== 200) {
-      file.close();
-      fs.unlinkSync(dest);
+      res.resume();
       return done(new Error(`下载失败，状态码: ${res.statusCode}`));
     }
     res.pipe(file);
     file.on('finish', () => file.close(() => done(null)));
-  }).on('error', (err) => {
-    file.close();
-    try { fs.unlinkSync(dest); } catch (_) {}
-    done(err);
   });
+  req.setTimeout(timeoutMs, () => { req.destroy(); done(new Error('下载超时')); });
+  req.on('error', (err) => { done(err); });
 }
 
 // Burn subtitle from uploaded file
