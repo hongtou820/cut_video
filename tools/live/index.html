@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Live Relay</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 16px; background: #f5f5f5; }
+  h2   { color: #333; }
+  label { display: block; margin: 10px 0 4px; font-size: 13px; color: #555; }
+  input[type=text], input[type=number] {
+    width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+  }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; }
+  button { margin-top: 14px; padding: 10px 24px; background: #1890ff; color: #fff;
+    border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+  button:hover { background: #096dd9; }
+  #result { margin-top: 20px; padding: 14px; background: #fff; border-radius: 6px;
+    border: 1px solid #ddd; display: none; }
+  #result code { word-break: break-all; color: #096dd9; }
+  .section { background: #fff; border-radius: 8px; padding: 18px; margin-bottom: 16px;
+    border: 1px solid #e0e0e0; }
+  .hint { font-size: 11px; color: #999; margin-top: 3px; }
+  #relayList { margin-top: 20px; }
+  .relay-item { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px;
+    margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .relay-item small { color: #888; display: block; margin-top: 2px; font-size: 11px; }
+  .stop-btn { background: #ff4d4f; padding: 6px 14px; font-size: 12px; }
+  .stop-btn:hover { background: #cf1322; }
+</style>
+</head>
+<body>
+<h2>Live Relay — Watermark Remover</h2>
+
+<div class="section">
+  <label>Source m3u8 URL <span style="color:red">*</span></label>
+  <input type="text" id="src" placeholder="https://stream.example.com/live/index.m3u8">
+
+  <label style="margin-top:16px">Remove watermark — cover with black box (fast)</label>
+  <div class="row">
+    <div><label>X</label><input type="number" id="cx" value="900" placeholder="x"></div>
+    <div><label>Y</label><input type="number" id="cy" value="0"   placeholder="y"></div>
+    <div><label>W</label><input type="number" id="cw" value="380" placeholder="width"></div>
+    <div><label>H</label><input type="number" id="ch" value="75"  placeholder="height"></div>
+  </div>
+  <p class="hint">Use "cover" (black box) for best performance. Adjust X/Y/W/H to match the watermark position.
+  For a 1280×720 stream the defaults above target the top-right ~300px.</p>
+
+  <label style="margin-top:14px">Your own watermark text (optional)</label>
+  <input type="text" id="logo" placeholder="e.g. icetv.cn">
+
+  <button onclick="startRelay()">Start Relay</button>
+</div>
+
+<div id="result">
+  <strong>Relay started!</strong><br>
+  HLS URL: <code id="hlsUrl"></code><br><br>
+  <span style="color:#888;font-size:12px">Open this URL in VLC → Media → Open Network Stream, or paste into your player.</span>
+</div>
+
+<div id="relayList"></div>
+
+<script>
+const BASE = '';
+
+async function startRelay() {
+  const src = document.getElementById('src').value.trim();
+  if (!src) { alert('Source URL required'); return; }
+
+  const body = { src };
+
+  const cx = +document.getElementById('cx').value;
+  const cy = +document.getElementById('cy').value;
+  const cw = +document.getElementById('cw').value;
+  const ch = +document.getElementById('ch').value;
+  if (cw > 0 && ch > 0) body.cover = { x: cx, y: cy, w: cw, h: ch };
+
+  const logo = document.getElementById('logo').value.trim();
+  if (logo) body.logo_text = logo;
+
+  const r = await fetch('/live/api/start', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!d.ok) { alert('Error: ' + (d.error || JSON.stringify(d))); return; }
+
+  const fullUrl = location.origin + d.url;
+  document.getElementById('hlsUrl').textContent = fullUrl;
+  document.getElementById('result').style.display = 'block';
+
+  loadList();
+}
+
+async function stopRelay(id) {
+  await fetch('/live/api/stop/' + id, { method: 'DELETE' });
+  loadList();
+}
+
+async function loadList() {
+  const r = await fetch('/live/api/list');
+  const list = await r.json();
+  const el = document.getElementById('relayList');
+  if (!list.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<h3 style="margin-bottom:8px">Active Relays</h3>' +
+    list.map(item => `
+      <div class="relay-item">
+        <div>
+          <strong>ID: ${item.id}</strong>
+          <small>Started: ${new Date(item.startedAt).toLocaleTimeString()}</small>
+          <small>Src: ${item.srcUrl}</small>
+          <small>URL: <a href="${location.origin}/live/output/${item.id}/index.m3u8" target="_blank">
+            ${location.origin}/live/output/${item.id}/index.m3u8</a></small>
+        </div>
+        <button class="stop-btn" onclick="stopRelay('${item.id}')">Stop</button>
+      </div>`).join('');
+}
+
+loadList();
+</script>
+</body>
+</html>

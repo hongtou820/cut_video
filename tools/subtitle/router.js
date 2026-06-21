@@ -293,6 +293,8 @@ function probeResolution(inputPath, callback) {
 function downloadFile(url, dest, callback) {
   const mod = url.startsWith('https') ? https : http;
   const file = fs.createWriteStream(dest);
+  let called = false;
+  const done = (err) => { if (called) return; called = true; callback(err); };
   mod.get(url, (res) => {
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       file.close();
@@ -302,14 +304,14 @@ function downloadFile(url, dest, callback) {
     if (res.statusCode !== 200) {
       file.close();
       fs.unlinkSync(dest);
-      return callback(new Error(`下载失败，状态码: ${res.statusCode}`));
+      return done(new Error(`下载失败，状态码: ${res.statusCode}`));
     }
     res.pipe(file);
-    file.on('finish', () => file.close(() => callback(null)));
+    file.on('finish', () => file.close(() => done(null)));
   }).on('error', (err) => {
     file.close();
     try { fs.unlinkSync(dest); } catch (_) {}
-    callback(err);
+    done(err);
   });
 }
 
@@ -388,7 +390,6 @@ router.post('/api/burn-subtitle-url', upload.fields([
   function processWithVideo(videoInput, subFilePath, cleanupVideo) {
     const subPath = escapeSubPath(subFilePath);
 
-    // Use URL directly with input seeking — ffmpeg only downloads the requested segment
     const isUrl = videoInput.startsWith('http://') || videoInput.startsWith('https://');
 
     probeResolution(videoInput, (width, height) => {
@@ -399,9 +400,9 @@ router.post('/api/burn-subtitle-url', upload.fields([
         const baseFilter = delogoFilter ? `[0:v]${delogoFilter}[dl];${buildLogoFilter(logoScale)};[dl][logo]${bounce}` : `${buildLogoFilter(logoScale)};[0:v][logo]${bounce}`;
         const fc = `${baseFilter},${subFilter}[v]`;
 
-        // For URLs: -ss before -i = input seeking (HTTP range, only downloads the segment)
-        // For local files: -ss after -i is fine
-        const args = isUrl ? [
+        // Input-seeking args (URL only): -ss before -i sends HTTP Range request — fast but
+        // fails with 504 if the upstream proxy can't handle Range. Falls back to output seek.
+        const inputSeekArgs = [
           '-y',
           '-ss', start,
           '-analyzeduration', '20000000',
@@ -413,7 +414,10 @@ router.post('/api/burn-subtitle-url', upload.fields([
           '-map', '[v]', '-map', '0:a',
           '-pix_fmt', 'yuv420p',
           outputPath,
-        ] : [
+        ];
+
+        // Output-seeking args: -ss after -i — downloads from start of file but always works
+        const outputSeekArgs = [
           '-y',
           '-i', videoInput,
           '-i', LOGO_PATH,
@@ -425,21 +429,42 @@ router.post('/api/burn-subtitle-url', upload.fields([
           outputPath,
         ];
 
-        console.log('[Subtitle-URL] Processing:', { start, end, delogo: !!delogoFilter, videoUrl, subtitleUrl: subtitleUrl || 'file' });
-
-        execFile('ffmpeg', args, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+        const cleanup = () => {
           try { fs.unlinkSync(subFilePath); } catch (_) {}
           if (cleanupVideo) { try { fs.unlinkSync(videoInput); } catch (_) {} }
+        };
 
+        const finish = (err, stderr) => {
+          cleanup();
           if (err) {
             console.error('[Subtitle-URL] FFmpeg error:', stderr || err.message);
             jobs.set(jobId, { status: 'error', error: 'FFmpeg 处理失败: ' + (stderr?.split('\n').pop() || err.message), created: Date.now() });
             return;
           }
-
           saveMeta(outputName, { start, end, videoUrl, subtitleUrl: subtitleUrl || '', language: language || '' });
           jobs.set(jobId, { status: 'done', url: `/subtitle/output/${outputName}`, filename: outputName, created: Date.now() });
           console.log('[Subtitle-URL] Job done:', jobId);
+        };
+
+        const runOutputSeek = () => {
+          console.log('[Subtitle-URL] Retrying with output seeking (no Range request):', videoInput);
+          jobs.set(jobId, { status: 'processing', created: Date.now() });
+          execFile('ffmpeg', outputSeekArgs, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, _out, stderr) => {
+            finish(err, stderr);
+          });
+        };
+
+        const firstArgs = isUrl ? inputSeekArgs : outputSeekArgs;
+        console.log('[Subtitle-URL] Processing:', { start, end, seek: isUrl ? 'input' : 'output', delogo: !!delogoFilter });
+
+        execFile('ffmpeg', firstArgs, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 }, (err, _out, stderr) => {
+          if (err && isUrl && stderr && /Server returned 5XX|HTTP error [45]\d\d/i.test(stderr)) {
+            // Proxy rejected the Range request — retry without input seeking
+            console.warn('[Subtitle-URL] Input seeking got HTTP error, falling back to output seeking');
+            runOutputSeek();
+            return;
+          }
+          finish(err, stderr);
         });
       });
     });

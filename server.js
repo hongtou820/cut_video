@@ -4,6 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Uncaught exception (server kept alive):', err.message);
+});
+
 // Database module (graceful - app works without it)
 let db;
 try {
@@ -40,7 +44,7 @@ function apiPost(url, headers, body) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -405,6 +409,13 @@ const clipperRouter = require('./tools/clipper/router');
 app.use('/clipper', clipperRouter);
 app.get('/clipper', (req, res) => {
   res.sendFile(path.join(__dirname, 'tools/clipper/index.html'));
+});
+
+// ===== Live Relay Tool =====
+const liveRouter = require('./tools/live/router');
+app.use('/live', liveRouter);
+app.get('/live', (req, res) => {
+  res.sendFile(path.join(__dirname, 'tools/live/index.html'));
 });
 
 app.listen(PORT, () => {
